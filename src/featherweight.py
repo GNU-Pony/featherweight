@@ -28,6 +28,11 @@ from flocker import *
 height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
 (height, width) = height_width.decode('utf-8', 'error')[:-1].split(' ')
 
+old_stty = Popen('stty --save'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
+old_stty = old_stty.decode('utf-8', 'error')[:-1]
+
+Popen('stty -icanon -echo'.split(' '), stdout = PIPE, stderr = PIPE).communicate()
+
 
 home = os.environ['HOME']
 root = '%s/.featherweight' % home
@@ -62,20 +67,140 @@ def count_new(feeds):
 
 def print_node(feed, last, indent):
     title = feed['title']
-    prefix = indent + ('└' if last else '├') + ('── ' if islinux else '─╼ ')
+    prefix = indent + ('└' if last else '├')
+    collapsed = False
+    if ('inner' not in feed) or (('expanded' not in feed) or feed['expanded']):
+        prefix += '── ' if islinux else '─╼ '
+    else:
+        collapsed = True
+        prefix += '─┘ ' if islinux else '─┚ '
     if feed['new'] > 0:
         prefix += '\033[01;31m(%i)\033[00m ' % feed['new']
+    if select_stack[-1][0] == feed:
+        title = '\033[01;34m%s\033[00m' % title
     print(prefix + title)
-    if 'inner' in feed:
+    if ('inner' in feed) and not collapsed:
         inner = feed['inner']
         for feed in inner:
             print_node(feed, feed is inner[-1], indent + ('    ' if last else '│   '))
 
 
 count = count_new(feeds)
-if count > 0:
-    print('\033[01;31m(%i)\033[00m' % count, end = ' ')
-print('My Feeds')
-for feed in feeds:
-    print_node(feed, feed is feeds[-1], '')
+
+def print_tree():
+    print('\033[H\033[2J', end = '')
+    if count > 0:
+        print('\033[01;31m(%i)\033[00m' % count, end = ' ')
+    title = 'My Feeds'
+    if len(select_stack) == 1:
+        title = '\033[01;34m%s\033[00m' % title
+    print(title)
+    for feed in feeds:
+        print_node(feed, feed is feeds[-1], '')
+
+
+print('\033[?1049h\033[?25l', end = '')
+select_stack = [(None, None)]
+print_tree()
+
+try:
+    buf = ''
+    while True:
+        buf += sys.stdin.read(1)
+        buf = buf[-10:]
+        if buf.endswith('\033[A'):
+            if select_stack[-1][0] is not None:
+                cur = select_stack[-1][0]
+                curi = select_stack[-1][1]
+                select_stack.pop()
+                if curi > 0:
+                    par = select_stack[-1][0]
+                    par = feeds if par is None else par['inner']
+                    curi -= 1
+                    cur = par[curi]
+                    select_stack.append((cur, curi))
+                    while 'inner' in cur:
+                        curi = len(cur['inner']) - 1
+                        cur = cur['inner'][curi]
+                        select_stack.append((cur, curi))
+                print_tree()
+        elif buf.endswith('\033[1;5A'):
+            if select_stack[-1][0] is not None:
+                cur = select_stack[-1][0]
+                curi = select_stack[-1][1]
+                select_stack.pop()
+                if curi > 0:
+                    par = select_stack[-1][0]
+                    par = feeds if par is None else par['inner']
+                    select_stack.append((par[curi - 1], curi - 1))
+                print_tree()
+        elif buf.endswith('\033[B'):
+            if select_stack[-1][0] is None:
+                if len(feeds) > 0:
+                    select_stack.append((feeds[0], 0))
+                    print_tree()
+            else:
+                cur = select_stack[-1][0]
+                curi = select_stack[-1][1]
+                if 'inner' in cur:
+                    select_stack.append((cur['inner'][0], 0))
+                    print_tree()
+                else:
+                    backup = select_stack[:]
+                    while len(select_stack) > 1:
+                        par = select_stack[-2][0]
+                        par = feeds if par is None else par['inner']
+                        select_stack.pop()
+                        if curi + 1 < len(par):
+                            select_stack.append((par[curi + 1], curi + 1))
+                            backup = None
+                            print_tree()
+                            break
+                        cur = select_stack[-1][0]
+                        curi = select_stack[-1][1]
+                    if backup is not None:
+                        select_stack[:] = backup
+        elif buf.endswith('\033[1;5B'):
+            if select_stack[-1][0] is not None:
+                while len(select_stack) > 1:
+                    cur = select_stack[-1][0]
+                    curi = select_stack[-1][1]
+                    par = select_stack[-2][0]
+                    par = feeds if par is None else par['inner']
+                    select_stack.pop()
+                    if curi + 1 < len(par):
+                        select_stack.append((par[curi + 1], curi + 1))
+                        print_tree()
+                        break
+        elif buf.endswith('\033[C'):
+            if select_stack[-1][0] is None:
+                if len(feeds) > 0:
+                    select_stack.append((feeds[0], 0))
+                    print_tree()
+            else:
+                cur = select_stack[-1][0]
+                curi = select_stack[-1][1]
+                if 'inner' in cur:
+                    select_stack.append((cur['inner'][0], 0))
+                    print_tree()
+        elif buf.endswith('\033[D'):
+            if len(select_stack) > 1:
+                select_stack.pop()
+                print_tree()
+        elif buf.endswith('\033[1;5D'):
+            select_stack[:] = select_stack[:1]
+            print_tree()
+        elif buf.endswith('\t'):
+            print('Tab')
+        elif buf.endswith('\n'):
+            print('Enter')
+        elif buf.endswith(' '):
+            print('Space')
+    
+except Exception as err:
+    raise err
+    pass
+finally:
+    Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
+    print('\033[?25h\033[?1049l', end = '')
 
