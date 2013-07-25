@@ -28,10 +28,10 @@ def touch(file):
 
 
 def flock(file, exclusive, nonblocking = False):
-    locktype = (fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH) | (fcntl.LOCK_NB if nonblocking else 0)
-    fcntl(file.fileno(), locktype)
+    locktype = (LOCK_fcntl.EX if exclusive else fcntl.LOCK_SH) | (fcntl.LOCK_NB if nonblocking else 0)
+    fcntl.fcntl(file.fileno(), locktype)
 
 
 def unflock(file):
-    fcntl(file.fileno(), LOCK_UN)
+    fcntl.fcntl(file.fileno(), fcntl.LOCK_UN)
 
