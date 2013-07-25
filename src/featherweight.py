@@ -22,19 +22,76 @@ import xml.parsers.expat
 import sys
 
 
-rss = sys.argv[1]
-with open(rss, 'r') as file:
-    rss = file.read()
+feed = sys.argv[1]
+with open(feed, 'r') as file:
+    feed = file.read()
 
 
 parser = xml.parsers.expat.ParserCreate()
 
+
+is_rss = False
+feeds = []
+rss_root = None
+item = None
+text = None
+
+
 def start_element(name, attributes):
-    print('Start element:', name, attributes)
+    global is_rss, feeds, rss_root, item, text
+    name = name.lower()
+    if rss_root is None:
+        if name == 'rss':
+            is_rss = True
+        elif is_rss:
+            if name == 'channel':
+                rss_root = {'items' : []}
+                return
+    else:
+        if item is None:
+            if name == 'item':
+                item = {}
+                return
+    text = ''
+
+
 def end_element(name):
-    print('End element:', name)
+    global is_rss, feeds, rss_root, item, text
+    if rss_root is not None:
+        if item is not None:
+            if name == 'item':
+                rss_root['items'].append(item)
+                item = None
+            elif name == 'title':
+                item['title'] = text
+            elif name == 'description':
+                item['description'] = text
+            elif name == 'link':
+                item['link'] = text
+            elif name == 'guid':
+                item['guid'] = text
+            elif name == 'pubdate':
+                item['pubdate'] = text
+        else:
+            if name == 'title':
+                rss_root['title'] = text
+            elif name == 'description':
+                rss_root['description'] = text
+            elif name == 'link':
+                rss_root['link'] = text
+            elif name == 'channel':
+                feeds.append(rss_root)
+                rss_root = None
+            elif name == 'rss':
+                is_rss = False
+    text = None
+
+
 def char_data(data):
-    print('Character data:', repr(data))
+    global text
+    if text is not None:
+        text += data
+
 
 
 parser.StartElementHandler = start_element
@@ -42,5 +99,7 @@ parser.EndElementHandler = end_element
 parser.CharacterDataHandler = char_data
 
 
-parser.Parse(rss, True)
+parser.Parse(feed, True)
+
+print(feeds)
 
