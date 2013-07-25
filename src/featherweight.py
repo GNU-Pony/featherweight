@@ -160,6 +160,7 @@ def start_element(name, attributes):
 
 def end_element(name):
     global is_rss, feeds, root, item, text, is_atom, attrs
+    name = name.lower()
     if (root is not None) and is_rss:
         if item is not None:
             if name == 'item':
