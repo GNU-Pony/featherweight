@@ -49,7 +49,7 @@ def rss_date(value):
     value = value.replace(':', ' ').split(' ')
     (_, day, month, year, hour, minute, second, offset) = value
     offsign, offhour, offmin = offset[0] == '+', offset[1 : 3], offset[3 : 5]
-    year, day = int(year), month.lower(), int(day)
+    year, month, day = int(year), month.lower(), int(day)
     hour, minute, second = int(hour), int(minute), int(second)
     offhour, offmin = int(offhour), int(offmin)
     months = ['', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
