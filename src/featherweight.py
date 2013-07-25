@@ -39,10 +39,51 @@ text = None
 
 
 def rss_date(value):
+    value = value.replace(' ', '').replace('\t', '').replace('\n', '').replace('\r', '')
     return value
 
 def atom_date(value):
-    return value
+    value = value.replace(' ', '').replace('\t', '').replace('\n', '').replace('\r', '')
+    value = value.replace('+', 'T+').replace('-', 'T-').replace('Z', 'T+0000')
+    (year, month, day) = value.split('T')[0].split('-')
+    (hour, minute, second) = value.split('T')[1].split(':')
+    offset = value.split('T')[2]
+    offsign, offhour, offmin = offset[0] == '+', offset[1 : 3], offset[3 : 5]
+    year, month, day = int(year), int(month), int(day)
+    hour, minute, second = int(hour), int(minute), int(second)
+    offhour, offmin = int(offhour), int(offmin)
+    if offsign:
+        hour += offhour
+        minute += offmin
+    else:
+        hour -= offhour
+        minute -= offmin
+    while minute < 0:
+        hour -= 1
+        minute += 60
+    if minute >= 60:
+        hour += minute // 60
+        minute %= 60
+    while hour < 0:
+        day -= 1
+        hour += 24
+    if hour >= 24:
+        day += hour // 24
+        hour %= 24
+    mds = [0, 31, 30, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    while day <= 0:
+        month -= 1
+        if month <= 0:
+            month += 12
+            year -= 1
+        day += mds[month]
+    while day > mds[month]:
+        day -= mds[month]
+        month += 1
+        if month > 12:
+            month -= 12
+            year += 1
+    return [year, month, day, hour, minute, day]
 
 
 def start_element(name, attributes):
