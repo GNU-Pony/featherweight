@@ -47,14 +47,34 @@ with touch('%s/feeds' % root) as feeds_flock:
     unflock(feeds_flock)
 
 
+def count_new(feeds):
+    rc = 0
+    for feed in feeds:
+        count = 0
+        if 'inner' in feed:
+            count = count_new(feed['inner'])
+            feed['new'] = count
+        else:
+            count = feed['new']
+        rc += count
+    return rc
+
+
 def print_node(feed, last, indent):
     title = feed['title']
-    print(indent + ('└' if last else '├') + ('── ' if islinux else '─╼ ') + title)
+    prefix = indent + ('└' if last else '├') + ('── ' if islinux else '─╼ ')
+    if feed['new'] > 0:
+        prefix += '\033[01;31m(%i)\033[00m ' % feed['new']
+    print(prefix + title)
     if 'inner' in feed:
         inner = feed['inner']
         for feed in inner:
             print_node(feed, feed is inner[-1], indent + ('    ' if last else '│   '))
 
+
+count = count_new(feeds)
+if count > 0:
+    print('\033[01;31m(%i)\033[00m' % count, end = ' ')
 print('My Feeds')
 for feed in feeds:
     print_node(feed, feed is feeds[-1], '')
