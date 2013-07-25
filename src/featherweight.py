@@ -31,59 +31,94 @@ parser = xml.parsers.expat.ParserCreate()
 
 
 is_rss = False
+is_atom = False
 feeds = []
-rss_root = None
+root = None
 item = None
 text = None
 
 
+def rss_date(value):
+    return value
+
+def atom_date(value):
+    return value
+
+
 def start_element(name, attributes):
-    global is_rss, feeds, rss_root, item, text
+    global is_rss, feeds, root, item, text, is_atom, attrs
+    attrs = attributes
     name = name.lower()
-    if rss_root is None:
-        if name == 'rss':
-            is_rss = True
-        elif is_rss:
+    if is_rss:
+        if root is None:
             if name == 'channel':
-                rss_root = {'items' : []}
-                return
-    else:
+                root = {'items' : []}
+        else:
+            if item is None:
+                if name == 'item':
+                    item = {}
+    elif is_atom:
         if item is None:
-            if name == 'item':
+            if name == 'entry':
                 item = {}
-                return
+    elif name == 'rss':
+        is_rss = True
+    elif name == 'feed':
+        is_atom = True
+        root = {'items' : []}
     text = ''
 
 
 def end_element(name):
-    global is_rss, feeds, rss_root, item, text
-    if rss_root is not None:
+    global is_rss, feeds, root, item, text, is_atom, attrs
+    if (root is not None) and is_rss:
         if item is not None:
             if name == 'item':
-                rss_root['items'].append(item)
+                root['items'].append(item)
+                item = None
+            elif name in ('title', 'description', 'link', 'guid'):
+                item[name] = text
+            elif name == 'pubdate':
+                item['pubdate'] = rss_date(text)
+        else:
+            if name in ('title', 'description', 'link'):
+                root[name] = text
+            elif name == 'channel':
+                feeds.append(root)
+                root = None
+            elif name == 'rss':
+                is_rss = False
+    elif (root is not None) and is_atom:
+        if item is not None:
+            if name == 'entry':
+                root['items'].append(item)
                 item = None
             elif name == 'title':
                 item['title'] = text
-            elif name == 'description':
+            elif name == 'id':
+                item['guid'] = text
+            elif name == 'summary':
+                if 'description' not in item:
+                    item['description'] = text
+            elif name == 'content':
                 item['description'] = text
             elif name == 'link':
-                item['link'] = text
-            elif name == 'guid':
-                item['guid'] = text
-            elif name == 'pubdate':
-                item['pubdate'] = text
+                if 'rel' not in attrs:
+                    item['link'] = text
+            elif name == 'updated':
+                item['pubdate'] = atom_date(text)
         else:
             if name == 'title':
-                rss_root['title'] = text
-            elif name == 'description':
-                rss_root['description'] = text
+                root['title'] = text
+            elif name == 'subtitle':
+                root['description'] = text
             elif name == 'link':
-                rss_root['link'] = text
-            elif name == 'channel':
-                feeds.append(rss_root)
-                rss_root = None
-            elif name == 'rss':
-                is_rss = False
+                if 'rel' not in attrs:
+                    root['link'] = text
+            elif name == 'feed':
+                feeds.append(root)
+                root = None
+                is_atom = False
     text = None
 
 
