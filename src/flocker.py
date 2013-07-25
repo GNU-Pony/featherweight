@@ -21,6 +21,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import fcntl
 
 
+def touch(file):
+    file = open(file, 'a')
+    file.flush()
+    return file
+
+
 def flock(file, exclusive, nonblocking = False):
     locktype = (fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH) | (fcntl.LOCK_NB if nonblocking else 0)
     fcntl(file.fileno(), locktype)
