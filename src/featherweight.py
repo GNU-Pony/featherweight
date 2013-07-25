@@ -39,8 +39,56 @@ text = None
 
 
 def rss_date(value):
-    value = value.replace(' ', '').replace('\t', '').replace('\n', '').replace('\r', '')
-    return value
+    value = value.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ')
+    while value.startswith(' '):
+        value = value[1:]
+    while value.endswith(' '):
+        value = value[:-1]
+    while '  ' in value:
+        value = value.replace('  ', ' ')
+    value = value.replace(':').split(' ')
+    (_, day, month, year, hour, minute, second, offset) = value
+    offsign, offhour, offmin = offset[0] == '+', offset[1 : 3], offset[3 : 5]
+    year, day = int(year), month.lower(), int(day)
+    hour, minute, second = int(hour), int(minute), int(second)
+    offhour, offmin = int(offhour), int(offmin)
+    months = ['', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+    for m in range(len(months)):
+        if month == months[m]:
+            month = m
+            break
+    if offsign:
+        hour += offhour
+        minute += offmin
+    else:
+        hour -= offhour
+        minute -= offmin
+    while minute < 0:
+        hour -= 1
+        minute += 60
+    if minute >= 60:
+        hour += minute // 60
+        minute %= 60
+    while hour < 0:
+        day -= 1
+        hour += 24
+    if hour >= 24:
+        day += hour // 24
+        hour %= 24
+    mds = [0, 31, 30, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    while day <= 0:
+        month -= 1
+        if month <= 0:
+            month += 12
+            year -= 1
+        day += mds[month]
+    while day > mds[month]:
+        day -= mds[month]
+        month += 1
+        if month > 12:
+            month -= 12
+            year += 1
+    return [year, month, day, hour, minute, day]
 
 def atom_date(value):
     value = value.replace(' ', '').replace('\t', '').replace('\n', '').replace('\r', '')
