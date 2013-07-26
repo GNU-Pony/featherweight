@@ -80,7 +80,7 @@ def print_node(feed, last, indent):
         prefix += '─┘ ' if islinux else '─┚ '
     if feed['new'] > 0:
         prefix += '\033[01;31m(%i)\033[00m ' % feed['new']
-    if select_stack[-1][0] == feed:
+    if select_stack[-1][0] is feed:
         title = '\033[01;34m%s\033[00m' % title
     print(prefix + title)
     if ('inner' in feed) and not collapsed:
