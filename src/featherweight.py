@@ -189,7 +189,10 @@ try:
             else:
                 cur = select_stack[-1][0]
                 curi = select_stack[-1][1]
-                if ('inner' in cur) and is_expanded(cur):
+                if 'inner' in cur:
+                    if not is_expanded(cur):
+                        cur['expanded'] = True
+                        collapsed_count -= 1
                     select_stack.append((cur['inner'][0], 0))
                     print_tree()
         elif buf.endswith('\033[D'):
