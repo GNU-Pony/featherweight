@@ -101,6 +101,8 @@ def print_tree():
 
 print('\033[?1049h\033[?25l', end = '')
 select_stack = [(None, None)]
+global collapsed_count
+collapsed_count = 0
 print_tree()
 
 try:
@@ -193,12 +195,32 @@ try:
         elif buf.endswith('\033[1;5D'):
             select_stack[:] = select_stack[:1]
             print_tree()
+        elif buf.endswith(' '):
+            cur = select_stack[-1][0]
+            if cur is None:
+                def expand(feed, value):
+                    global collapsed_count
+                    if 'inner' in feed:
+                        cur_value = (('expanded' not in feed) or feed['expanded'])
+                        if cur_value != value:
+                            feed['expanded'] = value
+                            collapsed_count += -1 if value else 1
+                        for inner in feed['inner']:
+                            expand(inner, value)
+                value = collapsed_count != 0
+                for feed in feeds:
+                    expand(feed, value)
+            else:
+                if 'inner' in cur:
+                    value = not (('expanded' not in cur) or cur['expanded'])
+                    collapsed_count += -1 if value else 1
+                    cur['expanded'] = value
+            print_tree()
+            print('Space')
         elif buf.endswith('\t'):
             print('Tab')
         elif buf.endswith('\n'):
             print('Enter')
-        elif buf.endswith(' '):
-            print('Space')
     
 except Exception as err:
     raise err
