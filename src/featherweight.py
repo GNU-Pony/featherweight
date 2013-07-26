@@ -220,6 +220,8 @@ try:
                     collapsed_count += -1 if value else 1
                     cur['expanded'] = value
             print_tree()
+        elif buf == 'q':
+            break
         elif buf.endswith('\t'):
             print('Tab')
         elif buf.endswith('\n'):
