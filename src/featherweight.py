@@ -125,7 +125,7 @@ try:
                     curi -= 1
                     cur = par[curi]
                     select_stack.append((cur, curi))
-                    while 'inner' in cur:
+                    while ('inner' in cur) and is_expanded(cur):
                         curi = len(cur['inner']) - 1
                         cur = cur['inner'][curi]
                         select_stack.append((cur, curi))
@@ -148,7 +148,7 @@ try:
             else:
                 cur = select_stack[-1][0]
                 curi = select_stack[-1][1]
-                if 'inner' in cur:
+                if ('inner' in cur) and is_expanded(cur):
                     select_stack.append((cur['inner'][0], 0))
                     print_tree()
                 else:
@@ -189,7 +189,7 @@ try:
             else:
                 cur = select_stack[-1][0]
                 curi = select_stack[-1][1]
-                if 'inner' in cur:
+                if ('inner' in cur) and is_expanded(cur):
                     select_stack.append((cur['inner'][0], 0))
                     print_tree()
         elif buf.endswith('\033[D'):
