@@ -65,11 +65,15 @@ def count_new(feeds):
     return rc
 
 
+def is_expanded(feed):
+    return ('expanded' not in feed) or feed['expanded']
+
+
 def print_node(feed, last, indent):
     title = feed['title']
     prefix = indent + ('└' if last else '├')
     collapsed = False
-    if ('inner' not in feed) or (('expanded' not in feed) or feed['expanded']):
+    if ('inner' not in feed) or (is_expanded(feed)):
         prefix += '── ' if islinux else '─╼ '
     else:
         collapsed = True
@@ -201,7 +205,7 @@ try:
                 def expand(feed, value):
                     global collapsed_count
                     if 'inner' in feed:
-                        cur_value = (('expanded' not in feed) or feed['expanded'])
+                        cur_value = is_expanded(feed)
                         if cur_value != value:
                             feed['expanded'] = value
                             collapsed_count += -1 if value else 1
@@ -212,11 +216,10 @@ try:
                     expand(feed, value)
             else:
                 if 'inner' in cur:
-                    value = not (('expanded' not in cur) or cur['expanded'])
+                    value = not is_expanded(cur)
                     collapsed_count += -1 if value else 1
                     cur['expanded'] = value
             print_tree()
-            print('Space')
         elif buf.endswith('\t'):
             print('Tab')
         elif buf.endswith('\n'):
