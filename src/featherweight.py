@@ -32,6 +32,11 @@ old_stty = old_stty.decode('utf-8', 'error')[:-1]
 Popen('stty -icanon -echo'.split(' '), stdout = PIPE, stderr = PIPE).communicate()
 
 
+args = sys.argv[1:]
+update = '--update' in args
+system = '--system' in args
+
+
 home = os.environ['HOME']
 root = '%s/.featherweight' % home
 if not os.path.exists(root):
@@ -45,8 +50,33 @@ with touch('%s/feeds' % root) as feeds_flock:
     if len(feeds) == 0:
         feeds = '[]'
     feeds = eval(feeds)
+    
+    if update:
+        group = None
+        for arg in args:
+            if not arg.startswith('-'):
+                group = arg
+                break
+        
+        def update_feed(feed, if_group):
+            if 'inner' in feed:
+                for feed in feed['inner']:
+                    update_feed(feed, if_group)
+            elif (if_group is None) or (feed['group'] == if_group):
+                pass # TODO update feed
+        
+        for feed in feeds:
+            update_feed(feed, group)
+        
+        updated = str(feeds)
+        with open('%s/feeds' % root, 'wb') as file:
+            file.write(updated.encode('utf-8'))
+    
     unflock(feeds_flock)
 
+
+if system:
+    sys.exit(0)
 
 print('\033[?1049h\033[?25l\033[?9h', end = '')
 
