@@ -48,7 +48,7 @@ with touch('%s/feeds' % root) as feeds_flock:
     unflock(feeds_flock)
 
 
-print('\033[?1049h\033[?25l', end = '')
+print('\033[?1049h\033[?25l\033[?9h', end = '')
 
 try:
     tree = Tree('My Feeds', feeds)
@@ -62,9 +62,10 @@ try:
         elif action == 'open':
             pass
 
-except:
+except Exception as err:
+    raise err
     pass
 finally:
     Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
-    print('\033[?25h\033[?1049l', end = '')
+    print('\033[?9l\033[?25h\033[?1049l', end = '')
 

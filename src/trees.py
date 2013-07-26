@@ -133,11 +133,77 @@ class Tree():
         global height, width
         self.print_tree()
         
-        buf = ''
+        buf = '\0' * 10
+        queued = ''
         while True:
-            buf += sys.stdin.read(1)
+            if queued == '':
+                buf += chr(sys.stdin.buffer.read(1)[0])
+            else:
+                buf += queued[:1]
+                queued = queued[1:]
             buf = buf[-10:]
-            if buf.endswith('\033[A'):
+            if buf[-4 : -1] == '%s%s%s' % (chr(27), chr(91), chr(77)):
+                pass
+            elif buf[-5 : -2] == '%s%s%s' % (chr(27), chr(91), chr(77)):
+                pass
+            elif buf[-6 : -3] == '%s%s%s' % (chr(27), chr(91), chr(77)):
+                a, x, y = ord(buf[-3]), ord(buf[-2]), ord(buf[-1])
+                if a == 96:
+                    queued += '\033[A' * 3
+                elif a == 97:
+                    queued += '\033[B' * 3
+                elif a == 32:
+                    y -= 33
+                    if y < 0:
+                        y += 256
+                    line = self.lineoff + y
+                    last = self.select_stack[-1][0]
+                    backup = self.select_stack[:]
+                    self.select_stack[:] = self.select_stack[:1]
+                    tline = 0
+                    if line > 0:
+                        while tline != line:
+                            if self.select_stack[-1][0] is None:
+                                if len(self.feeds) > 0:
+                                    self.select_stack.append((self.feeds[0], 0))
+                                    tline += 1
+                            else:
+                                cur = self.select_stack[-1][0]
+                                curi = self.select_stack[-1][1]
+                                if ('inner' in cur) and self.is_expanded(cur):
+                                    self.select_stack.append((cur['inner'][0], 0))
+                                    tline += 1
+                                else:
+                                    has_next = False
+                                    while len(self.select_stack) > 1:
+                                        par = self.select_stack[-2][0]
+                                        par = self.feeds if par is None else par['inner']
+                                        self.select_stack.pop()
+                                        if curi + 1 < len(par):
+                                            self.select_stack.append((par[curi + 1], curi + 1))
+                                            has_next = True
+                                            break
+                                        cur = self.select_stack[-1][0]
+                                        curi = self.select_stack[-1][1]
+                                    if not has_next:
+                                        break
+                                    else:
+                                        tline += 1
+                        if tline == line:
+                            backup = None
+                    else:
+                        backup = None
+                    if backup is None:
+                        if self.select_stack[-1][0] is last:
+                            if (last is None) or ('inner' in last):
+                                queued += ' '
+                            else:
+                                queued += '\n'
+                        else:
+                            self.print_tree()
+                    else:
+                        self.select_stack[:] = backup
+            elif buf.endswith('\033[A'):
                 if self.select_stack[-1][0] is not None:
                     cur = self.select_stack[-1][0]
                     curi = self.select_stack[-1][1]
