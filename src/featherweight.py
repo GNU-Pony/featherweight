@@ -161,17 +161,20 @@ try:
                     if backup is not None:
                         select_stack[:] = backup
         elif buf.endswith('\033[1;5B'):
-            if select_stack[-1][0] is not None:
-                while len(select_stack) > 1:
-                    cur = select_stack[-1][0]
-                    curi = select_stack[-1][1]
-                    par = select_stack[-2][0]
-                    par = feeds if par is None else par['inner']
+            while select_stack[-1][0] is not None:
+                cur = select_stack[-1][0]
+                curi = select_stack[-1][1]
+                par = select_stack[-2][0]
+                par = feeds if par is None else par['inner']
+                if curi + 1 < len(par):
                     select_stack.pop()
-                    if curi + 1 < len(par):
-                        select_stack.append((par[curi + 1], curi + 1))
-                        print_tree()
-                        break
+                    select_stack.append((par[curi + 1], curi + 1))
+                    print_tree()
+                    break
+                elif select_stack[-2][0] is not None:
+                    select_stack.pop()
+                else:
+                    break
         elif buf.endswith('\033[C'):
             if select_stack[-1][0] is None:
                 if len(feeds) > 0:
