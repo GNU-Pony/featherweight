@@ -97,5 +97,5 @@ except Exception as err:
     pass
 finally:
     Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
-    print('\033[?9l\033[?25h\033[?1049l', end = '')
+    print('\n\033[?9l\033[?25h\033[?1049l', end = '')
 
