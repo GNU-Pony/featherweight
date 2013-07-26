@@ -67,6 +67,7 @@ def is_expanded(feed):
 
 
 def print_node(feed, last, indent):
+    global line, curline, lineoff, height
     title = feed['title']
     prefix = indent + ('└' if last else '├')
     collapsed = False
@@ -79,7 +80,15 @@ def print_node(feed, last, indent):
         prefix += '\033[01;31m(%i)\033[00m ' % feed['new']
     if select_stack[-1][0] is feed:
         title = '\033[01;34m%s\033[00m' % title
-    print(prefix + title)
+    if lineoff <= curline < lineoff + height:
+        if curline > lineoff:
+            print()
+        print(prefix + title, end = '')
+    curline += 1
+    if line >= 0:
+        line += 1
+        if select_stack[-1][0] is feed:
+            line = ~line
     if ('inner' in feed) and not collapsed:
         inner = feed['inner']
         for feed in inner:
@@ -88,19 +97,47 @@ def print_node(feed, last, indent):
 
 count = count_new(feeds)
 
+global height, width
+height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
+(height, width) = height_width.decode('utf-8', 'error')[:-1].split(' ')
+height, width = int(height), int(width)
+
+global line, curline, lineoff
+line = 0
+curline = 0
+lineoff = 0
 def print_tree():
+    global line, curline, lineoff, height, width
+    line = 0
+    curline = 0
     height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
     (height, width) = height_width.decode('utf-8', 'error')[:-1].split(' ')
+    height, width = int(height), int(width)
     
     print('\033[H\033[2J', end = '')
-    if count > 0:
-        print('\033[01;31m(%i)\033[00m' % count, end = ' ')
     title = 'My Feeds'
     if len(select_stack) == 1:
         title = '\033[01;34m%s\033[00m' % title
-    print(title)
+    if lineoff <= curline < lineoff + height:
+        if count > 0:
+            print('\033[01;31m(%i)\033[00m ' % count, end = '')
+        print(title, end = '')
+    line += 1
+    curline += 1
+    if len(select_stack) == 1:
+        line = ~line
     for feed in feeds:
         print_node(feed, feed is feeds[-1], '')
+    sys.stdout.flush()
+    
+    line = ~line
+    if not (lineoff < line <= lineoff + height):
+        lineoff = line - height // 2
+        if not (lineoff < line <= lineoff + height):
+            lineoff -= 1
+        if lineoff < 0:
+            lineoff = 0
+        print_tree()
 
 
 print('\033[?1049h\033[?25l', end = '')
@@ -223,7 +260,7 @@ try:
                     collapsed_count += -1 if value else 1
                     cur['expanded'] = value
             print_tree()
-        elif buf.endswith(chr(ord('L') - ord('@')):
+        elif buf.endswith(chr(ord('L') - ord('@'))):
             print_tree()
         elif buf.endswith('q'):
             break
