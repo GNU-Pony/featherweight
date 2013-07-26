@@ -51,8 +51,17 @@ with touch('%s/feeds' % root) as feeds_flock:
 print('\033[?1049h\033[?25l', end = '')
 
 try:
-    Tree('My Feeds', feeds).interact()
-    
+    tree = Tree('My Feeds', feeds)
+    while True:
+        (action, node) = tree.interact()
+        if action == 'quit':
+            break
+        elif action == 'edit':
+            if node is not None:
+                pass
+        elif action == 'open':
+            pass
+
 except:
     pass
 finally:
