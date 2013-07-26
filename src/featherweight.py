@@ -25,9 +25,6 @@ from subprocess import Popen, PIPE
 from flocker import *
 
 
-height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
-(height, width) = height_width.decode('utf-8', 'error')[:-1].split(' ')
-
 old_stty = Popen('stty --save'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'error')[:-1]
 
@@ -92,6 +89,9 @@ def print_node(feed, last, indent):
 count = count_new(feeds)
 
 def print_tree():
+    height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
+    (height, width) = height_width.decode('utf-8', 'error')[:-1].split(' ')
+    
     print('\033[H\033[2J', end = '')
     if count > 0:
         print('\033[01;31m(%i)\033[00m' % count, end = ' ')
@@ -223,7 +223,9 @@ try:
                     collapsed_count += -1 if value else 1
                     cur['expanded'] = value
             print_tree()
-        elif buf == 'q':
+        elif buf.endswith(chr(ord('L') - ord('@')):
+            print_tree()
+        elif buf.endswith('q'):
             break
         elif buf.endswith('\t'):
             print('Tab')
