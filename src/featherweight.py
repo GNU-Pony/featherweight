@@ -63,7 +63,23 @@ with touch('%s/feeds' % root) as feeds_flock:
                 for feed in feed['inner']:
                     update_feed(feed, if_group)
             elif (if_group is None) or (feed['group'] == if_group):
-                pass # TODO update feed
+                uuid = feed['uuid']
+                with touch('%s/%s' % (root, uuid)) as feed_flock:
+                    flock(feed_flock, True)
+                    feed_info = None
+                    with open('%s/%s' % (root, uuid), 'rb') as file:
+                        feed_info = file.read().decode('utf-8', 'error')
+                    feed_info = eval(feed_info)
+                    have = feed_info['have']
+                    unread = feed_info['unread']
+                    
+                    ## TODO update feed
+                    
+                    feed['new'] = len(unread)
+                    with open('%s/%s' % (root, uuid), 'wb') as file:
+                        file.write(str(feed_info).decode('utf-8'))
+                        file.flush()
+                    unflock(feed_flock)
         
         for feed in feeds:
             update_feed(feed, group)
