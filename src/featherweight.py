@@ -24,7 +24,7 @@ from subprocess import Popen, PIPE
 
 from flocker import *
 from trees import *
-from parser import *
+from updater import *
 
 
 old_stty = Popen('stty --save'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
@@ -58,47 +58,7 @@ with touch('%s/feeds' % root) as feeds_flock:
             if not arg.startswith('-'):
                 group = arg
                 break
-        
-        def update_feed(feed, if_group):
-            if 'inner' in feed:
-                for feed in feed['inner']:
-                    update_feed(feed, if_group)
-            elif (if_group is None) or (feed['group'] == if_group):
-                uuid = feed['uuid']
-                with touch('%s/%s' % (root, uuid)) as feed_flock:
-                    flock(feed_flock, True)
-                    feed_info = None
-                    with open('%s/%s' % (root, uuid), 'rb') as file:
-                        feed_info = file.read().decode('utf-8', 'error')
-                    feed_info = eval(feed_info)
-                    have = feed_info['have']
-                    unread = feed_info['unread']
-                    url = feed_info['url']
-                    
-                    try:
-                        feed_data = Popen(['wget', url, '-O', '-'], stdout = PIPE).communicate()[0]
-                        feed_data = parse_feed(feed_data)
-                        old_data = None
-                        with open('%s/%s-content' % (root, uuid), 'rb') as file:
-                            old_data = file.read().decode('utf-8', 'error')
-                        for channel in feed_data:
-                            for item in channel['items']:
-                                guid = item['guid']
-                                if have not in guid:
-                                    unread.add(guid)
-                                    have.add(guid)
-                                    old_data.append(item)
-                        with open('%s/%s-content' % (root, uuid), 'wb') as file:
-                            file.write(str(old_data).decode('utf-8'))
-                    except:
-                        pass
-                    
-                    feed['new'] = len(unread)
-                    with open('%s/%s' % (root, uuid), 'wb') as file:
-                        file.write(str(feed_info).decode('utf-8'))
-                        file.flush()
-                    unflock(feed_flock)
-        
+                
         for feed in feeds:
             update_feed(feed, group)
         
