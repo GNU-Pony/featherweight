@@ -54,9 +54,8 @@ class TextArea(): # TODO support small screens
         datalines = []
         
         for key in self.fields:
-            for line in self.datamap[key].split('\n'):
-                leftlines.append(key)
-                datalines.append(line)
+            leftlines.append(key)
+            datalines.append(self.datamap[key])
         
         (termh, termw) = self.termsize
         (y, x) = (0, 0)
@@ -87,17 +86,21 @@ class TextArea(): # TODO support small screens
         alerted = False
         edited = False
         print('\033[%i;%iH' % (self.top + y, innerleft + x), end='')
+        
+        def t(y, x1, x2):
+            return datalines[y][x1 : x2]
+        
         while True:
             if (oldmark is not None) and (oldmark >= 0):
                 if oldmark < oldx:
-                    print('\033[%i;%iH\033[49m%s\033[%i;%iH' % (self.top + oldy, innerleft + oldmark, datalines[oldy][oldmark : oldx], self.top + y, innerleft + x), end='')
+                    print('\033[%i;%iH\033[49m%s\033[%i;%iH' % (self.top + oldy, innerleft + oldmark, t(oldy, oldmark, oldx), self.top + y, innerleft + x), end='')
                 elif oldmark > oldx:
-                    print('\033[%i;%iH\033[49m%s\033[%i;%iH' % (self.top + oldy, innerleft + oldx, datalines[oldy][oldx : oldmark], self.top + y, innerleft + x), end='')
+                    print('\033[%i;%iH\033[49m%s\033[%i;%iH' % (self.top + oldy, innerleft + oldx, t(oldy, oldx, oldmark), self.top + y, innerleft + x), end='')
             if (mark is not None) and (mark >= 0):
                 if mark < x:
-                    print('\033[%i;%iH\033[44;37m%s\033[49;39m\033[%i;%iH' % (self.top + y, innerleft + mark, datalines[y][mark : x], self.top + y, innerleft + x), end='')
+                    print('\033[%i;%iH\033[44;37m%s\033[49;39m\033[%i;%iH' % (self.top + y, innerleft + mark, t(y, mark, x), self.top + y, innerleft + x), end='')
                 elif mark > x:
-                    print('\033[%i;%iH\033[44;37m%s\033[49;39m\033[%i;%iH' % (self.top + y, innerleft + x, datalines[y][x : mark], self.top + y, innerleft + x), end='')
+                    print('\033[%i;%iH\033[44;37m%s\033[49;39m\033[%i;%iH' % (self.top + y, innerleft + x, t(y, x, mark), self.top + y, innerleft + x), end='')
             if y != oldy:
                 if (oldy > 0) and (leftlines[oldy - 1] == leftlines[oldy]) and (leftlines[oldy] == leftlines[-1]):
                     print('\033[%i;%iH\033[34m%s\033[39m' % (self.top + oldy, self.left, '>'), end='')
@@ -182,17 +185,7 @@ class TextArea(): # TODO support small screens
                 elif ord(d) == ord('S') - ord('@'):
                     last = ''
                     for row in range(0, len(datalines)):
-                        current = leftlines[row]
-                        if len(datalines[row].strip()) == 0:
-                            if current is not 'comment':
-                                if current != last:
-                                    self.datamap[current] = None
-                                continue
-                        if current == last:
-                            self.datamap[current] += '\n' + datalines[row]
-                        else:
-                            self.datamap[current] = datalines[row]
-                            last = current
+                        self.datamap[leftlines[row]] = datalines[row]
                     saver()
                     status('unmodified' + (' override' if override else ''))
                     alert('Saved')
