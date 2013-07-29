@@ -58,7 +58,14 @@ with touch('%s/feeds' % root) as feeds_flock:
             if not arg.startswith('-'):
                 group = arg
                 break
-                
+        
+        def update_feed(feed, if_group):
+            if 'inner' in feed:
+                for feed in feed['inner']:
+                    update_feed(feed, if_group)
+            elif (if_group is None) or (feed['group'] == if_group):
+                pass # TODO update feed
+        
         for feed in feeds:
             update_feed(feed, group)
         
