@@ -43,6 +43,9 @@ class Tree():
         self.line = 0
         self.curline = 0
         self.lineoff = 0
+        self.draw_force = True
+        self.draw_line = 0
+        self.last_select = None
     
     
     def count_new(self, feeds):
@@ -62,7 +65,7 @@ class Tree():
         return ('expanded' not in feed) or feed['expanded']
     
     
-    def print_node(self, feed, last, indent):
+    def print_node(self, feed, last, indent, force):
         global height, width
         title = feed['title']
         prefix = indent + ('└' if last else '├')
@@ -83,16 +86,24 @@ class Tree():
         if self.lineoff <= self.curline < self.lineoff + height:
             if self.curline > self.lineoff:
                 print()
-            print(prefix + title, end = '')
+            if force or ('draw_line' not in feed) or (feed['draw_line'] != self.draw_line):
+                print('' if force else '\033[2K', end = prefix + title)
+                feed['draw_line'] = self.draw_line
+            self.draw_line += 1
         self.curline += 1
         if self.line >= 0:
             self.line += 1
             if self.select_stack[-1][0] is feed:
                 self.line = ~self.line
-        if ('inner' in feed) and not collapsed:
-            inner = feed['inner']
-            for feed in inner:
-                self.print_node(feed, feed is inner[-1], indent + ('    ' if last else '│   '))
+        if ('inner' in feed):
+            if collapsed:
+                feed['draw_expanded'] = False
+            else:
+                inner = feed['inner']
+                _force = force or not feed['draw_expanded']
+                feed['draw_expanded'] = True
+                for feed in inner:
+                    self.print_node(feed, feed is inner[-1], indent + ('    ' if last else '│   '), _force)
     
     
     def print_tree(self):
@@ -103,30 +114,47 @@ class Tree():
         (height, width) = height_width.decode('utf-8', 'error')[:-1].split(' ')
         height, width = int(height), int(width)
         
-        print('\033[H\033[2J', end = '')
+        if self.last_select is not self.select_stack[-1][0]:
+            if self.last_select is not None:
+                self.last_select['draw_line'] = -1
+            if self.select_stack[-1][0] is not None:
+                self.select_stack[-1][0]['draw_line'] = -1
+        
+        print('\033[H', end = '')
+        if self.draw_force:
+            print('\033[2J', end = '')
         title = self.root
         if len(self.select_stack) == 1:
             title = '\033[01;34m%s\033[00m' % title
         if self.lineoff <= self.curline < self.lineoff + height:
-            if count > 0:
-                print('\033[01;31m(%i)\033[00m ' % count, end = '')
-            print(title, end = '')
+            if self.draw_force or ((self.last_select is not None) == (self.select_stack[-1][0] is None)):
+                if count > 0:
+                    print('\033[01;31m(%i)\033[00m ' % count, end = '')
+                print(title, end = '')
         self.line += 1
         self.curline += 1
         if len(self.select_stack) == 1:
             self.line = ~self.line
+        self.draw_line = 1
         for feed in self.feeds:
-            self.print_node(feed, feed is self.feeds[-1], '')
+            self.print_node(feed, feed is self.feeds[-1], '', self.draw_force)
+        if self.draw_line < height:
+            print('\n\033[J', end = '')
         sys.stdout.flush()
+        
+        self.last_select = self.select_stack[-1][0]
         
         self.line = ~self.line
         if not (self.lineoff < self.line <= self.lineoff + height):
+            self.draw_force = True
             self.lineoff = self.line - height // 2
             if not (self.lineoff < self.line <= self.lineoff + height):
                 self.lineoff -= 1
             if self.lineoff < 0:
                 self.lineoff = 0
             self.print_tree()
+        
+        self.draw_force = False
     
     
     def interact(self):
@@ -312,6 +340,7 @@ class Tree():
                         cur['expanded'] = value
                 self.print_tree()
             elif buf.endswith(chr(ord('L') - ord('@'))):
+                self.draw_force = True
                 self.print_tree()
             elif buf.endswith('q'):
                 return ('quit', None)
