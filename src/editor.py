@@ -26,7 +26,7 @@ from subprocess import Popen, PIPE
 GNU Emacs alike text area
 '''
 class TextArea(): # TODO support small screens
-    def __init__(self, fields, datamap, left, top, width, height, termsize):
+    def __init__(self, fields, datamap, left, top, width, height):
         '''
         Constructor
         
@@ -36,9 +36,8 @@ class TextArea(): # TODO support small screens
         @param  top:int                 Top position of the component
         @param  width:int               Width of the component
         @param  height:int              Height of the component
-        @param  termsize:(int, int)     The height and width of the terminal
         '''
-        self.fields, self.datamap, self.left, self.top, self.width, self.height, self.termsize = fields, datamap, left, top, width - 1, height, termsize
+        self.fields, self.datamap, self.left, self.top, self.width, self.height = fields, datamap, left, top, width, height
     
     
     
@@ -57,7 +56,6 @@ class TextArea(): # TODO support small screens
             leftlines.append(key)
             datalines.append(self.datamap[key])
         
-        (termh, termw) = self.termsize
         (y, x) = (0, 0)
         mark = None
         
@@ -66,7 +64,7 @@ class TextArea(): # TODO support small screens
         killptr = None
         
         def status(text):
-            print('\033[%i;%iH\033[7m%s\033[27m\033[%i;%iH' % (termh - 1, 1, ' (' + text + ') ' + '-' * (termw - len(' (' + text + ') ')), self.top + y, innerleft + x), end='')
+            print('\033[%i;%iH\033[7m%s\033[27m\033[%i;%iH' % (self.height - 1, 1, ' (' + text + ') ' + '-' * (self.width - len(' (' + text + ') ')), self.top + y, innerleft + x), end='')
         
         status('unmodified')
         
@@ -76,7 +74,7 @@ class TextArea(): # TODO support small screens
             if text is None:
                 alert('')
             else:
-                print('\033[%i;%iH\033[2K%s\033[%i;%iH' % (termh, 1, text, self.top + y, innerleft + x), end='')
+                print('\033[%i;%iH\033[2K%s\033[%i;%iH' % (self.height, 1, text, self.top + y, innerleft + x), end='')
         
         modified = False
         override = False
@@ -355,9 +353,9 @@ def phonysaver():
 print('\033[H\033[2J')
 old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'error')[:-1]
-Popen('stty -icanon -echo -isig'.split(' '), stdout = PIPE).communicate()
+Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
 try:
-    TextArea(['alpha', 'beta'], {'alpha' : 'a', 'beta' : 'be'}, 1, 1, 20, 4, (4, 20)).run(phonysaver)
+    TextArea(['alpha', 'beta'], {'alpha' : 'a', 'beta' : 'be'}, 1, 1, 20, 4).run(phonysaver)
 finally:
     print('\033[H\033[2J', end = '')
     sys.stdout.flush()
