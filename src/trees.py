@@ -333,11 +333,13 @@ class Tree():
                     value = self.collapsed_count != 0
                     for feed in self.feeds:
                         expand(feed, value)
+                    self.draw_force = True
                 else:
                     if 'inner' in cur:
                         value = not self.is_expanded(cur)
                         self.collapsed_count += -1 if value else 1
                         cur['expanded'] = value
+                        cur['draw_line'] = -1
                 self.print_tree()
             elif buf.endswith(chr(ord('L') - ord('@'))):
                 self.draw_force = True
