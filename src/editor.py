@@ -25,7 +25,7 @@ from subprocess import Popen, PIPE
 '''
 GNU Emacs alike text area
 '''
-class TextArea(): # TODO support small screens
+class TextArea():
     def __init__(self, fields, datamap, left, top, width, height):
         '''
         Constructor
@@ -37,217 +37,323 @@ class TextArea(): # TODO support small screens
         @param  width:int               Width of the component
         @param  height:int              Height of the component
         '''
-        self.fields, self.datamap, self.left, self.top, self.width, self.height = fields, datamap, left, top, width, height
+        self.fields, self.datamap, self.left, self.top, self.width, self.height = fields, datamap, left, top, width - 1, height
+        self.innerleft = len(max(self.fields, key = len)) + 3
+        self.lines = [TextArea.Line(self, self.fields[y], self.datamap[self.fields[y]], y) for y in range(len(self.fields))]
+        self.areawidth = self.width - self.innerleft - self.left + 1
+        self.killring, self.killmax, self.killptr = [], 50, 0
+        self.y, self.x, self.offx, self.mark = 0, 0, 0, None
+        self.last_alert, self.last_status, self.alerted = None, None, False
+    
+    
+    def get_selection(self, for_display = False):
+        a = min(self.mark, self.x)
+        b = max(self.mark, self.x)
+        if for_display:
+            a = min(max(a - self.offx, 0), self.areawidth)
+            b = min(max(b - self.offx, 0), self.areawidth)
+        return (a, b)
+    
+    
+    class Line():
+        def __init__(self, area, name, text, y):
+            self.area, self.name, self.text, self.y = area, name, text, y
+        
+        def draw(self):
+            leftside = '\033[%i;%iH\033[%s34m%s:\033[00m' % (self.area.top + self.y, self.area.left, '01;' if self.area.y == self.y else '', self.name)
+            text = self.text[self.area.offx:][:self.area.areawidth]
+            if (self.area.y == self.y) and (self.area.mark is not None) and (self.area.mark >= 0):
+                (a, b) = self.area.get_selection(True)
+                if a != b:
+                    text = text[:a] + ('\033[44;37m%s\033[00m' % text[a : b]) + text[b:]
+            print('%s\033[%i;%iH%s' % (leftside, self.area.top + self.y, self.area.left + self.area.innerleft, text), end='')
+        
+        def copy(self):
+            if (self.area.mark is not None) and (self.area.mark >= 0) and (self.area.mark != self.area.x):
+                (a, b) = self.area.get_selection()
+                self.area.killring.append(self.text[a : b])
+                if len(self.area.killring) > self.area.killmax:
+                    self.area.killring[:] = self.area.killring[1:]
+                (a, b) = self.area.get_selection(True)
+                text = self.text[self.area.offx:][:self.area.areawidth][a : b]
+                print('\033[%i;%iH%s' % (self.area.top + self.y, self.area.left + self.area.innerleft + a, text), end='')
+                self.area.mark = None
+                return True
+            else:
+                return False
+        
+        def cut(self):
+            mark, x = self.area.mark, self.area.x
+            if self.copy():
+                self.area.mark, self.area.x = mark, x
+                self.delete()
+                return True
+            else:
+                return False
+        
+        def kill(self):
+            if self.area.x < len(self.text):
+                self.area.mark = len(self.text)
+                self.cut()
+                return True
+            else:
+                return False
+        
+        def delete(self):
+            removed = 0
+            if (self.area.mark is not None) and (self.area.mark >= 0) and (self.area.mark != self.area.x):
+                (a, b) = self.area.get_selection()
+                self.text = self.text[:a] + self.text[b:]
+                self.area.x = a
+                if self.area.offx > len(self.text):
+                    self.area.offx = max(len(self.text) - self.area.areawidth, 0)
+                    self.area.mark = None
+                    print('\033[%i;%iH%s' % (self.area.top + self.y, self.area.left + self.area.innerleft, ' ' * self.area.areawidth), end='')
+                    self.draw()
+                    return True
+                removed = b - a
+            self.area.mark = None
+            if removed == 0:
+                if self.area.x == len(self.text):
+                    return False
+                removed = 1
+                self.text = self.text[:self.area.x] + self.text[self.area.x + 1:]
+            text = self.text[self.area.offx:][:self.area.areawidth]
+            a = min(max(self.area.x - self.area.offx, 0), self.area.areawidth)
+            left = self.area.left + self.area.innerleft + a
+            print('\033[%i;%iH%s\033[%i;%iH' % (self.area.top + self.y, left, text[a:] + ' ' * removed, self.area.top + self.y, left), end='')
+            return True
+        
+        def erase(self):
+            if not ((self.area.mark is not None) and (self.area.mark >= 0) and (self.area.mark != self.area.x)):
+                self.area.mark = None
+                if self.area.x == 0:
+                    return False
+                self.area.x -= 1
+                if self.area.x < self.area.offx:
+                    self.area.offx = max(self.area.offx - self.area.areawidth, 0)
+            self.delete()
+            return True
+        
+        def yank(self, resetptr = True):
+            if len(self.area.killring) == 0:
+                return False
+            self.area.mark = None
+            if resetptr:
+                self.area.killptr = len(self.area.killring) - 1
+            yanked = self.area.killring[self.area.killptr]
+            self.text = self.text[:self.area.x] + self.area.killring[self.area.killptr] + self.text[self.area.x:]
+            self.area.x += len(yanked)
+            if self.area.x > self.area.offx + self.area.areawidth:
+                self.area.offx = len(self.text) - self.area.areawidth
+            print('\033[%i;%iH%s' % (self.area.top + self.y, self.area.left + self.area.innerleft, ' ' * self.area.areawidth), end='')
+            self.draw()
+            print('\033[%i;%iH' % (self.area.top + self.y, self.area.left + self.area.innerleft + self.area.x - self.area.offx), end='')
+            return True
+        
+        def yank_cycle(self):
+            if len(self.area.killring) == 0:
+                return False
+            yanked = self.area.killring[self.area.killptr]
+            if self.text[max(self.area.x - len(yanked), 0) : self.area.x] != yanked:
+                return False
+            self.area.mark = self.area.x - len(yanked)
+            self.delete()
+            self.area.killptr -= 1
+            self.yank(self.area.killptr < 0)
+            return True
+        
+        def move_point(self, delta):
+            x = self.area.x + delta
+            if 0 <= x <= len(self.text):
+                self.area.x = x
+                if delta < 0:
+                    print('\033[%iD' % -delta, end='')
+                elif delta > 0:
+                    print('\033[%iC' % delta, end='')
+                return delta != 0
+            return False
+        
+        def swap_mark(self):
+            if (self.area.mark is not None) and (self.area.mark >= 0):
+                self.area.mark, self.area.x = self.area.x, self.area.mark
+                return True
+            else:
+                return False
+        
+        def override(self, insert, override = True):
+            if (self.area.mark is not None) and (self.area.mark >= 0):
+                self.area.mark = ~(self.area.mark)
+            a, b = self.area.x, self.area.x
+            if override:
+                b = min(self.area.x + len(insert), len(self.text))
+            self.text = self.text[:a] + insert + self.text[b:]
+            self.area.x += len(insert)
+            if self.area.x - self.area.offx < self.area.areawidth:
+                print(insert, end='')
+            else:
+                self.area.offx = len(self.text) - self.area.areawidth
+                print('\033[%i;%iH%s' % (self.area.top + self.y, self.area.left + self.area.innerleft, ' ' * self.area.areawidth), end='')
+                self.draw()
+                print('\033[%i;%iH' % (self.area.top + self.y, self.area.left + self.area.innerleft + self.area.x - self.area.offx), end='')
+        
+        def insert(self, insert):
+            self.override(insert, False)
     
     
     
-    def run(self, saver):
+    def status(self, text):
+        print('\033[%i;%iH\033[7m%s-\033[27m\033[%i;%iH' % (self.height - 1, 1, ' (' + text + ') ' + '-' * (self.width - len(' (' + text + ') ')), self.top + self.y, self.left + self.innerleft + self.x), end='')
+        self.last_status = text
+    
+    def alert(self, text):
+        if text is None:
+            self.alert('')
+            self.alerted = False
+        else:
+            print('\033[%i;%iH\033[2K%s\033[%i;%iH' % (self.height, 1, text, self.top + self.y, self.left + self.innerleft + self.x), end='')
+            self.alerted = True
+        self.last_alert = text
+    
+    def restatus(self):
+        self.status(self.last_status)
+    
+    def realert(self):
+        self.alert(self.last_alert)
+    
+    
+    def run(self, saver, preredrawer, postredrawer):
         '''
         Execute text reading
         
         @param  saver  Save method
         '''
-        innerleft = len(max(self.fields, key = len)) + self.left + 3
         
-        leftlines = []
-        datalines = []
-        
-        for key in self.fields:
-            leftlines.append(key)
-            datalines.append(self.datamap[key])
-        
-        (y, x) = (0, 0)
-        mark = None
-        
-        KILL_MAX = 50
-        killring = []
-        killptr = None
-        
-        def status(text):
-            print('\033[%i;%iH\033[7m%s\033[27m\033[%i;%iH' % (self.height - 1, 1, ' (' + text + ') ' + '-' * (self.width - len(' (' + text + ') ')), self.top + y, innerleft + x), end='')
-        
-        status('unmodified')
-        
-        print('\033[%i;%iH' % (self.top, innerleft), end='')
-        
-        def alert(text):
-            if text is None:
-                alert('')
-            else:
-                print('\033[%i;%iH\033[2K%s\033[%i;%iH' % (self.height, 1, text, self.top + y, innerleft + x), end='')
+        self.status('unmodified')
         
         modified = False
         override = False
         
-        (oldy, oldx, oldmark) = (y, x, mark)
+        oldy, oldx, oldmark = self.y, self.x, self.mark
         stored = chr(ord('L') - ord('@'))
-        alerted = False
         edited = False
-        print('\033[%i;%iH' % (self.top + y, innerleft + x), end='')
-        
-        def t(y, x1, x2):
-            return datalines[y][x1 : x2]
         
         while True:
-            if (oldmark is not None) and (oldmark >= 0):
-                if oldmark < oldx:
-                    print('\033[%i;%iH\033[49m%s\033[%i;%iH' % (self.top + oldy, innerleft + oldmark, t(oldy, oldmark, oldx), self.top + y, innerleft + x), end='')
-                elif oldmark > oldx:
-                    print('\033[%i;%iH\033[49m%s\033[%i;%iH' % (self.top + oldy, innerleft + oldx, t(oldy, oldx, oldmark), self.top + y, innerleft + x), end='')
-            if (mark is not None) and (mark >= 0):
-                if mark < x:
-                    print('\033[%i;%iH\033[44;37m%s\033[49;39m\033[%i;%iH' % (self.top + y, innerleft + mark, t(y, mark, x), self.top + y, innerleft + x), end='')
-                elif mark > x:
-                    print('\033[%i;%iH\033[44;37m%s\033[49;39m\033[%i;%iH' % (self.top + y, innerleft + x, t(y, x, mark), self.top + y, innerleft + x), end='')
-            if y != oldy:
-                if (oldy > 0) and (leftlines[oldy - 1] == leftlines[oldy]) and (leftlines[oldy] == leftlines[-1]):
-                    print('\033[%i;%iH\033[34m%s\033[39m' % (self.top + oldy, self.left, '>'), end='')
-                else:
-                    print('\033[%i;%iH\033[34m%s:\033[39m' % (self.top + oldy, self.left, leftlines[oldy]), end='')
-                if (y > 0) and (leftlines[y - 1] == leftlines[y]) and (leftlines[y] == leftlines[-1]):
-                    print('\033[%i;%iH\033[1;34m%s\033[21;39m' % (self.top + y, self.left, '>'), end='')
-                else:
-                    print('\033[%i;%iH\033[1;34m%s:\033[21;39m' % (self.top + y, self.left, leftlines[y]), end='')
-                print('\033[%i;%iH' % (self.top + y, innerleft + x), end='')
-            (oldy, oldx, oldmark) = (y, x, mark)
+            if ((oldmark is not None) and (oldmark >= 0)) or ((self.mark is not None) and (self.mark >= 0)):
+                self.lines[self.y].draw()
+            if self.y != oldy:
+                self.lines[oldy].draw()
+                self.lines[self.y].draw()
+                print('\033[%i;%iH' % (self.top + self.y, self.left + self.innerleft + self.x - self.offx), end='')
+            (oldy, oldx, oldmark) = (self.y, self.x, self.mark)
             if edited:
                 edited = False
                 if not modified:
                     modified = True
-                    status('modified' + (' override' if override else ''))
+                    self.status('modified' + (' override' if override else ''))
             sys.stdout.flush()
             if stored is None:
                 d = sys.stdin.read(1)
             else:
                 d = stored
                 stored = None
-            if alerted:
-                alerted = False
-                alert(None)
+            if self.alerted:
+                self.alert(None)
             if ord(d) == ord('@') - ord('@'):
-                if mark is None:
-                    mark = x
-                    alert('Mark set')
-                elif mark == ~x:
-                    mark = x
-                    alert('Mark activated')
-                elif mark == x:
-                    mark = ~x
-                    alert('Mark deactivated')
+                if self.mark is None:
+                    self.mark = self.x
+                    self.alert('Mark set')
+                elif self.mark == ~(self.x):
+                    self.mark = self.x
+                    self.alert('Mark activated')
+                elif self.mark == self.x:
+                    self.mark = ~(self.x)
+                    self.alert('Mark deactivated')
                 else:
-                    mark = x
-                    alert('Mark set')
-                alerted = True
+                    self.mark = self.x
+                    self.alert('Mark set')
             elif ord(d) == ord('K') - ord('@'):
-                if x == len(datalines[y]):
-                    alert('At end')
-                    alerted = True
+                if not self.lines[self.y].kill():
+                    self.alert('At end')
                 else:
-                    mark = len(datalines[y])
-                    stored = chr(ord('W') - ord('@'))
+                    edited = True
             elif ord(d) == ord('W') - ord('@'):
-                if (mark is not None) and (mark >= 0) and (mark != x):
-                    selected = datalines[y][mark : x] if mark < x else datalines[y][x : mark]
-                    killring.append(selected)
-                    if len(killring) > KILL_MAX:
-                        killring = killring[1:]
-                    stored = chr(127)
+                if not self.lines[self.y].cut():
+                    self.alert('No text is selected')
                 else:
-                    alert('No text is selected')
-                    alerted = True
+                    edited = True
             elif ord(d) == ord('Y') - ord('@'):
-                if len(killring) == 0:
-                    alert('Killring is empty')
-                    alerted = True
+                if not self.lines[self.y].yank():
+                    self.alert('Killring is empty')
                 else:
-                    mark = None
-                    killptr = len(killring) - 1
-                    yanked = killring[killptr]
-                    print('\033[%i;%iH%s' % (self.top + y, innerleft + x, yanked + datalines[y][x:]), end='')
-                    datalines[y] = datalines[y][:x] + yanked + datalines[y][x:]
-                    x += len(yanked)
-                    print('\033[%i;%iH' % (self.top + y, innerleft + x), end='')
+                    edited = True
             elif ord(d) == ord('X') - ord('@'):
-                alert('C-x')
-                alerted = True
+                self.alert('C-x')
                 sys.stdout.flush()
                 d = sys.stdin.read(1)
-                alert(str(ord(d)))
+                self.alert(str(ord(d)))
                 sys.stdout.flush()
                 if ord(d) == ord('X') - ord('@'):
-                    if (mark is not None) and (mark >= 0):
-                        x ^= mark; mark ^= x; x ^= mark
-                        alert('Mark swapped')
+                    if self.lines[self.y].swap_mark():
+                        self.alert('Mark swapped')
                     else:
-                        alert('No mark is activated')
+                        self.alert('No mark is activated')
                 elif ord(d) == ord('S') - ord('@'):
                     last = ''
                     for row in range(0, len(datalines)):
-                        self.datamap[leftlines[row]] = datalines[row]
+                        self.datamap[self.lines[row].name] = self.lines[row].text
                     saver()
-                    status('unmodified' + (' override' if override else ''))
-                    alert('Saved')
+                    modified = False
+                    self.status('unmodified' + (' override' if override else ''))
+                    self.alert('Saved')
                 elif ord(d) == ord('C') - ord('@'):
                     break
                 else:
                     stored = d
-                    alerted = False
-                    alert(None)
+                    self.alert(None)
             elif (ord(d) == 127) or (ord(d) == 8):
-                removed = 1
-                if (mark is not None) and (mark >= 0) and (mark != x):
-                    if mark > x:
-                        x ^= mark; mark ^= x; x ^= mark
-                    removed = x - mark
-                if x == 0:
-                    alert('At beginning')
-                    alerted = True
-                    continue
-                dataline = datalines[y]
-                datalines[y] = dataline = dataline[:x - removed] + dataline[x:]
-                x -= removed
-                mark = None
-                print('\033[%i;%iH%s%s\033[%i;%iH' % (self.top + y, innerleft, dataline, ' ' * removed, self.top + y, innerleft + x), end='')
-                edited = True
+                if not self.lines[self.y].erase():
+                    self.alert('At beginning')
             elif ord(d) < ord(' '):
                 if ord(d) == ord('P') - ord('@'):
-                    if y == 0:
-                        alert('At first line')
-                        alerted = True
+                    if self.y == 0:
+                        self.alert('At first line')
                     else:
-                        y -= 1
-                        mark = None
-                        x = 0
+                        self.y -= 1
+                        self.mark = None
+                        self.x = 0
                 elif ord(d) == ord('N') - ord('@'):
-                    if y < len(datalines) - 1:
-                        y += 1
-                        mark = None
-                        x = 0
+                    if self.y < len(self.lines) - 1:
+                        self.y += 1
+                        self.mark = None
+                        self.x = 0
+                    else:
+                        self.alert('At last line')
                 elif ord(d) == ord('F') - ord('@'):
-                    if x < len(datalines[y]):
-                        x += 1
-                        print('\033[C', end='')
-                    else:
-                        alert('At end')
-                        alerted = True
+                    if not self.lines[self.y].move_point(1):
+                        self.alert('At end')
+                elif ord(d) == ord('E') - ord('@'):
+                    if not self.lines[self.y].move_point(len(self.lines[self.y].text) - self.x):
+                        self.alert('At end')
                 elif ord(d) == ord('B') - ord('@'):
-                    if x > 0:
-                        x -= 1
-                        print('\033[D', end='')
-                    else:
-                        alert('At beginning')
-                        alerted = True
+                    if not self.lines[self.y].move_point(-1):
+                        self.alert('At beginning')
+                elif ord(d) == ord('A') - ord('@'):
+                    if not self.lines[self.y].move_point(-self.x):
+                        self.alert('At beginning')
                 elif ord(d) == ord('L') - ord('@'):
-                    empty = '\033[0m' + (' ' * self.width + '\n') * len(datalines)
-                    print('\033[%i;%iH%s' % (self.top, self.left, empty), end='')
-                    for row in range(0, len(leftlines)):
-                        leftline = leftlines[row] + ':'
-                        if (leftlines[row - 1] == leftlines[row]) and (leftlines[row] == leftlines[-1]):
-                            leftline = '>'
-                        print('\033[%i;%iH\033[%s34m%s\033[%s39m' % (self.top + row, self.left, '1;' if row == y else '', leftline, '21;' if row == y else ''), end='')
-                    for row in range(0, len(datalines)):
-                        print('\033[%i;%iH%s\033[49m' % (self.top + row, innerleft, datalines[row]), end='')
-                    print('\033[%i;%iH' % (self.top + y, innerleft + x), end='')
+                    print('\033[H\033[2J', end='')
+                    preredrawer()
+                    for line in self.lines:
+                        line.draw()
+                    postredrawer()
+                    self.realert()
+                    self.restatus()
+                elif ord(d) == ord('D') - ord('@'):
+                    if not self.lines[self.y].delete():
+                        self.alert('At end')
+                    else:
+                        edited = True
                 elif d == '\033':
                     d = sys.stdin.read(1)
                     if d == '[':
@@ -255,9 +361,8 @@ class TextArea(): # TODO support small screens
                         if d == 'A':
                             stored = chr(ord('P') - ord('@'))
                         elif d == 'B':
-                            if y == len(datalines) - 1:
-                                alert('At last line')
-                                alerted = True
+                            if self.y == len(self.lines) - 1:
+                                self.alert('At last line')
                             else:
                                 stored = chr(ord('N') - ord('@'))
                         elif d == 'C':
@@ -268,24 +373,11 @@ class TextArea(): # TODO support small screens
                             d = sys.stdin.read(1)
                             if d == '~':
                                 override = not override
-                                status(('modified' if modified else 'unmodified') + (' override' if override else ''))
+                                self.status(('modified' if modified else 'unmodified') + (' override' if override else ''))
                         elif d == '3':
                             d = sys.stdin.read(1)
                             if d == '~':
-                                removed = 1
-                                if (mark is not None) and (mark >= 0) and (mark != x):
-                                    if mark < x:
-                                        x ^= mark; mark ^= x; x ^= mark
-                                    removed = mark - x
-                                dataline = datalines[y]
-                                if x == len(dataline):
-                                    alert('At end')
-                                    alerted = True
-                                    continue
-                                datalines[y] = dataline = dataline[:x] + dataline[x + removed:]
-                                print('\033[%i;%iH%s%s\033[%i;%iH' % (self.top + y, innerleft, dataline, ' ' * removed, self.top + y, innerleft + x), end='')
-                                mark = None
-                                edited = True
+                                stored = chr(ord('D') - ord('@'))
                         else:
                             while True:
                                 d = sys.stdin.read(1)
@@ -293,69 +385,42 @@ class TextArea(): # TODO support small screens
                                 if (ord('A') <= ord(d)) and (ord(d) <= ord('Z')): break
                                 if d == '~': break
                     elif (d == 'w') or (d == 'W'):
-                        if (mark is not None) and (mark >= 0) and (mark != x):
-                            selected = datalines[y][mark : x] if mark < x else datalines[y][x : mark]
-                            killring.append(selected)
-                            mark = None
-                            if len(killring) > KILL_MAX:
-                                killring = killring[1:]
-                        else:
-                            alert('No text is selected')
-                            alerted = True
+                        if not self.lines[self.y].copy():
+                            self.alert('No text is selected')
                     elif (d == 'y') or (d == 'Y'):
-                        if killptr is not None:
-                            yanked = killring[killptr]
-                            dataline = datalines[y]
-                            if (len(yanked) <= x) and (dataline[x - len(yanked) : x] == yanked):
-                                killptr -= 1
-                                if killptr < 0:
-                                    killptr += len(killring)
-                                dataline = dataline[:x - len(yanked)] + killring[killptr] + dataline[x:]
-                                additional = len(killring[killptr]) - len(yanked)
-                                x += additional
-                                datalines[y] = dataline
-                                print('\033[%i;%iH%s%s\033[%i;%iH' % (self.top + y, innerleft, dataline, ' ' * max(0, -additional), self.top + y, innerleft + x), end='')
-                            else:
-                                stored = chr(ord('Y') - ord('@'))
-                        else:
+                        if not self.lines[self.y].yank_cycle():
                             stored = chr(ord('Y') - ord('@'))
                     elif d == 'O':
                         d = sys.stdin.read(1)
                         if d == 'H':
-                            x = 0
+                            storted = chr(ord('A') - ord('@'))
                         elif d == 'F':
-                            x = len(datalines[y])
-                        print('\033[%i;%iH' % (self.top + y, innerleft + x), end='')
+                            storted = chr(ord('E') - ord('@'))
                 elif d == '\n':
                     stored = chr(ord('N') - ord('@'))
             else:
                 insert = d
                 if len(insert) == 0:
                     continue
-                dataline = datalines[y]
-                if (not override) or (x == len(dataline)):
-                    print(insert + dataline[x:], end='')
-                    if len(dataline) - x > 0:
-                        print('\033[%iD' % (len(dataline) - x), end='')
-                    datalines[y] = dataline[:x] + insert + dataline[x:]
-                    if (mark is not None) and (mark >= 0):
-                        if mark >= x:
-                            mark += len(insert)
+                if override:
+                    self.lines[self.y].override(insert)
                 else:
-                    print(insert, end='')
-                    datalines[y] = dataline[:x] + insert + dataline[x + 1:]
-                x += len(insert)
+                    self.lines[self.y].insert(insert)
                 edited = True
 
 
 def phonysaver():
+    pass
+def phonypreredraw():
+    pass
+def phonypostredraw():
     pass
 print('\033[H\033[2J')
 old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'error')[:-1]
 Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
 try:
-    TextArea(['alpha', 'beta'], {'alpha' : 'a', 'beta' : 'be'}, 1, 1, 20, 4).run(phonysaver)
+    TextArea(['alpha', 'beta'], {'alpha' : 'a', 'beta' : 'be'}, 1, 1, 20, 4).run(phonysaver, phonypreredraw, phonypostredraw)
 finally:
     print('\033[H\033[2J', end = '')
     sys.stdout.flush()
