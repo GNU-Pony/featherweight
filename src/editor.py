@@ -61,7 +61,7 @@ class TextArea():
         
         def draw(self):
             leftside = '\033[%i;%iH\033[%s34m%s:\033[00m' % (self.area.top + self.y, self.area.left, '01;' if self.area.y == self.y else '', self.name)
-            text = self.text[self.area.offx:][:self.area.areawidth]
+            text = self.text[self.area.offx if self.area.y == self.y else 0:][:self.area.areawidth]
             if (self.area.y == self.y) and (self.area.mark is not None) and (self.area.mark >= 0):
                 (a, b) = self.area.get_selection(True)
                 if a != b:
@@ -132,6 +132,8 @@ class TextArea():
                 self.area.x -= 1
                 if self.area.x < self.area.offx:
                     self.area.offx = max(self.area.offx - self.area.areawidth, 0)
+                    self.draw()
+                    print('\033[%i;%iH' % (self.area.top + self.y, self.area.left + self.area.innerleft + self.area.x - self.area.offx), end='')
             self.delete()
             return True
         
@@ -184,14 +186,20 @@ class TextArea():
         def override(self, insert, override = True):
             if (self.area.mark is not None) and (self.area.mark >= 0):
                 self.area.mark = ~(self.area.mark)
+            if len(insert) == 0:
+                return
             a, b = self.area.x, self.area.x
             if override:
                 b = min(self.area.x + len(insert), len(self.text))
             self.text = self.text[:a] + insert + self.text[b:]
+            oldx = self.area.x
             self.area.x += len(insert)
             if self.area.x - self.area.offx < self.area.areawidth:
                 if not override:
-                    print('\033[%i@' % len(insert), end='')
+                    y = self.area.top + self.y
+                    xi = self.area.left + self.area.innerleft
+                    print('\033[%i;%iH\033[%iP' % (y, xi + self.area.areawidth - len(insert), len(insert)), end='')
+                    print('\033[%i;%iH\033[%i@' % (y, xi + oldx - self.area.offx, len(insert)), end='')
                 print(insert, end='')
             else:
                 self.area.offx = len(self.text) - self.area.areawidth
@@ -205,7 +213,10 @@ class TextArea():
     
     
     def status(self, text):
-        print('\033[%i;%iH\033[7m%s-\033[27m\033[%i;%iH' % (self.height - 1, 1, ' (' + text + ') ' + '-' * (self.width - len(' (' + text + ') ')), self.top + self.y, self.left + self.innerleft + self.x), end='')
+        txt = ' (' + text + ') '
+        y = self.top + self.y
+        x = self.left + self.innerleft + self.x - self.offx
+        print('\033[%i;%iH\033[7m%s-\033[27m\033[%i;%iH' % (self.height - 1, 1, txt + '-' * (self.width - len(txt)), y, x), end='')
         self.last_status = text
     
     def alert(self, text):
@@ -213,7 +224,9 @@ class TextArea():
             self.alert('')
             self.alerted = False
         else:
-            print('\033[%i;%iH\033[2K%s\033[%i;%iH' % (self.height, 1, text, self.top + self.y, self.left + self.innerleft + self.x), end='')
+            y = self.top + self.y
+            x = self.left + self.innerleft + self.x - self.offx
+            print('\033[%i;%iH\033[2K%s\033[%i;%iH' % (self.height, 1, text, y, x), end='')
             self.alerted = True
         self.last_alert = text
     
