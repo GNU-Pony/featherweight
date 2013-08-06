@@ -190,6 +190,8 @@ class TextArea():
             self.text = self.text[:a] + insert + self.text[b:]
             self.area.x += len(insert)
             if self.area.x - self.area.offx < self.area.areawidth:
+                if not override:
+                    print('\033[%i@' % len(insert), end='')
                 print(insert, end='')
             else:
                 self.area.offx = len(self.text) - self.area.areawidth
