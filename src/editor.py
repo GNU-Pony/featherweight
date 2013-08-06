@@ -380,24 +380,32 @@ class TextArea():
                             d = sys.stdin.read(1)
                             if d == '~':
                                 stored = chr(ord('D') - ord('@'))
+                        elif d == '1':
+                            d = sys.stdin.read(1)
+                            if d == '~':
+                                stored = chr(ord('A') - ord('@'))
+                        elif d == '4':
+                            d = sys.stdin.read(1)
+                            if d == '~':
+                                stored = chr(ord('E') - ord('@'))
                         else:
                             while True:
                                 d = sys.stdin.read(1)
                                 if (ord('a') <= ord(d)) and (ord(d) <= ord('z')): break
                                 if (ord('A') <= ord(d)) and (ord(d) <= ord('Z')): break
                                 if d == '~': break
+                    elif d == 'O':
+                        d = sys.stdin.read(1)
+                        if d == 'H':
+                            stored = chr(ord('A') - ord('@'))
+                        elif d == 'F':
+                            stored = chr(ord('E') - ord('@'))
                     elif (d == 'w') or (d == 'W'):
                         if not self.lines[self.y].copy():
                             self.alert('No text is selected')
                     elif (d == 'y') or (d == 'Y'):
                         if not self.lines[self.y].yank_cycle():
                             stored = chr(ord('Y') - ord('@'))
-                    elif d == 'O':
-                        d = sys.stdin.read(1)
-                        if d == 'H':
-                            storted = chr(ord('A') - ord('@'))
-                        elif d == 'F':
-                            storted = chr(ord('E') - ord('@'))
                 elif d == '\n':
                     stored = chr(ord('N') - ord('@'))
             else:
