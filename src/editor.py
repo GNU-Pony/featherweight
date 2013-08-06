@@ -61,7 +61,7 @@ class TextArea():
         
         def draw(self):
             leftside = '\033[%i;%iH\033[%s34m%s:\033[00m' % (self.area.top + self.y, self.area.left, '01;' if self.area.y == self.y else '', self.name)
-            text = self.text[self.area.offx if self.area.y == self.y else 0:][:self.area.areawidth]
+            text = (self.text[self.area.offx if self.area.y == self.y else 0:] + ' ' * self.area.areawidth)[:self.area.areawidth]
             if (self.area.y == self.y) and (self.area.mark is not None) and (self.area.mark >= 0):
                 (a, b) = self.area.get_selection(True)
                 if a != b:
@@ -170,9 +170,20 @@ class TextArea():
             if 0 <= x <= len(self.text):
                 self.area.x = x
                 if delta < 0:
-                    print('\033[%iD' % -delta, end='')
+                    if self.area.offx > self.area.x:
+                        self.area.offx = self.area.x - self.area.areawidth
+                        self.area.offx = max(self.area.offx, 0)
+                        self.draw()
+                        print('\033[%i;%iH' % (self.area.top + self.y, self.area.left + self.area.innerleft + self.area.x - self.area.offx), end='')
+                    else:
+                        print('\033[%iD' % -delta, end='')
                 elif delta > 0:
-                    print('\033[%iC' % delta, end='')
+                    if self.area.x - self.area.offx > self.area.areawidth:
+                        self.area.offx = self.area.x
+                        self.draw()
+                        print('\033[%i;%iH' % (self.area.top + self.y, self.area.left + self.area.innerleft), end='')
+                    else:
+                        print('\033[%iC' % delta, end='')
                 return delta != 0
             return False
         
