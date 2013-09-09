@@ -22,6 +22,27 @@ import sys
 from subprocess import Popen, PIPE
 
 
+def limit(min_value, value, max_value):
+    '''
+    Limit a value to a closed set
+    
+    @param  min_value  Minimum value
+    @param  value      Preferred value
+    @param  max_value  Maximum value
+    '''
+    return min(max(min_value, value), max_value)
+
+
+def ctrl(key):
+    '''
+    Return the symbol for a specific letter pressed in combination with Ctrl
+    
+    @param   key  Without Ctrl
+    @return       With Ctrl
+    '''
+    return chr(ord(key) - ord('@'))
+
+
 class TextArea():
     '''
     GNU Emacs alike text area
@@ -47,28 +68,6 @@ class TextArea():
         self.last_alert, self.last_status, self.alerted = None, None, False
     
     
-    @staticmethod
-    def limit(min_value, value, max_value):
-        '''
-        Limit a value to a closed set
-        
-        @param  min_value  Minimum value
-        @param  value      Preferred value
-        @param  max_value  Maximum value
-        '''
-        return min(max(min_value, value), max_value)
-    
-    
-    @staticmethod
-    def ctrl(key):
-        '''
-        Return the symbol for a specific letter pressed in combination with Ctrl
-        
-        @param   key  Without Ctrl
-        @return       With Ctrl
-        '''
-        return chr(ord(key) - ord('@'))
-        
     
     def get_selection(self, for_display = False):
         a = min(self.mark, self.x)
@@ -427,7 +426,7 @@ class TextArea():
                     if d == '[':
                         d = sys.stdin.read(1)
                         if d == 'A':
-                            stored = ctrl('P'):
+                            stored = ctrl('P')
                         elif d == 'B':
                             if self.y == len(self.lines) - 1:
                                 self.alert('At last line')
