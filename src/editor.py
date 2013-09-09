@@ -345,18 +345,10 @@ class TextArea():
             if self.alerted:
                 self.alert(None)
             if d == ctrl('@'):
-                if self.mark is None:
-                    self.mark = self.x
-                    self.alert('Mark set')
-                elif self.mark == ~(self.x):
-                    self.mark = self.x
-                    self.alert('Mark activated')
-                elif self.mark == self.x:
-                    self.mark = ~(self.x)
-                    self.alert('Mark deactivated')
-                else:
-                    self.mark = self.x
-                    self.alert('Mark set')
+                if   self.mark is None:       self.mark = self.x    ; self.alert('Mark set')
+                elif self.mark == ~(self.x):  self.mark = self.x    ; self.alert('Mark activated')
+                elif self.mark == self.x:     self.mark = ~(self.x) ; self.alert('Mark deactivated')
+                else:                         self.mark = self.x    ; self.alert('Mark set')
             elif d == ctrl('K'):
                 if not self.lines[self.y].kill():
                     self.alert('At end')
@@ -450,27 +442,19 @@ class TextArea():
                                 self.alert('At last line')
                             else:
                                 stored = ctrl('N')
-                        elif d == 'C':
-                            stored = ctrl('F')
-                        elif d == 'D':
-                            stored = ctrl('B')
+                        elif d == 'C':  stored = ctrl('F')
+                        elif d == 'D':  stored = ctrl('B')
                         elif d == '2':
                             d = sys.stdin.read(1)
                             if d == '~':
                                 override = not override
                                 self.status(('modified' if modified else 'unmodified') + (' override' if override else ''))
                         elif d == '3':
-                            d = sys.stdin.read(1)
-                            if d == '~':
-                                stored = ctrl('D')
+                            if sys.stdin.read(1) == '~':  stored = ctrl('D')
                         elif d == '1':
-                            d = sys.stdin.read(1)
-                            if d == '~':
-                                stored = ctrl('A')
+                            if sys.stdin.read(1) == '~':  stored = ctrl('A')
                         elif d == '4':
-                            d = sys.stdin.read(1)
-                            if d == '~':
-                                stored = ctrl('E')
+                            if sys.stdin.read(1) == '~':  stored = ctrl('E')
                         else:
                             while True:
                                 d = sys.stdin.read(1)
