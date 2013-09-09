@@ -326,7 +326,7 @@ class TextArea():
                         self.alert('No mark is activated')
                 elif ord(d) == ord('S') - ord('@'):
                     last = ''
-                    for row in range(0, len(datalines)):
+                    for row in range(0, len(self.lines)):
                         self.datamap[self.lines[row].name] = self.lines[row].text
                     saver()
                     modified = False
