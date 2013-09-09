@@ -22,10 +22,11 @@ import sys
 from subprocess import Popen, PIPE
 
 
-'''
-GNU Emacs alike text area
-'''
 class TextArea():
+    '''
+    GNU Emacs alike text area
+    '''
+    
     def __init__(self, fields, datamap, left, top, width, height):
         '''
         Constructor
@@ -46,12 +47,35 @@ class TextArea():
         self.last_alert, self.last_status, self.alerted = None, None, False
     
     
+    @staticmethod
+    def limit(min_value, value, max_value):
+        '''
+        Limit a value to a closed set
+        
+        @param  min_value  Minimum value
+        @param  value      Preferred value
+        @param  max_value  Maximum value
+        '''
+        return min(max(min_value, value), max_value)
+    
+    
+    @staticmethod
+    def ctrl(key):
+        '''
+        Return the symbol for a specific letter pressed in combination with Ctrl
+        
+        @param   key  Without Ctrl
+        @return       With Ctrl
+        '''
+        return chr(ord(key) - ord('@'))
+        
+    
     def get_selection(self, for_display = False):
         a = min(self.mark, self.x)
         b = max(self.mark, self.x)
         if for_display:
-            a = min(max(a - self.offx, 0), self.areawidth)
-            b = min(max(b - self.offx, 0), self.areawidth)
+            a = limit(0, a - self.offx, self.areawidth)
+            b = limit(0, b - self.offx, self.areawidth)
         return (a, b)
     
     
@@ -119,7 +143,7 @@ class TextArea():
                 removed = 1
                 self.text = self.text[:self.area.x] + self.text[self.area.x + 1:]
             text = self.text[self.area.offx:][:self.area.areawidth]
-            a = min(max(self.area.x - self.area.offx, 0), self.area.areawidth)
+            a = limit(0, self.area.x - self.area.offx, self.area.areawidth)
             left = self.area.left + self.area.innerleft + a
             print('\033[%i;%iH%s\033[%i;%iH' % (self.area.top + self.y, left, text[a:] + ' ' * removed, self.area.top + self.y, left), end='')
             return True
@@ -224,6 +248,11 @@ class TextArea():
     
     
     def status(self, text):
+        '''
+        Print a message to the status bar
+        
+        @param  text:str  The message
+        '''
         txt = ' (' + text + ') '
         y = self.top + self.y
         x = self.left + self.innerleft + self.x - self.offx
@@ -231,6 +260,11 @@ class TextArea():
         self.last_status = text
     
     def alert(self, text):
+        '''
+        Print a message to the alert bar
+        
+        @param  text:str  The message
+        '''
         if text is None:
             self.alert('')
             self.alerted = False
@@ -242,9 +276,15 @@ class TextArea():
         self.last_alert = text
     
     def restatus(self):
+        '''
+        Reprint the status bar
+        '''
         self.status(self.last_status)
     
     def realert(self):
+        '''
+        Reprint the alert bar
+        '''
         self.alert(self.last_alert)
     
     
@@ -252,7 +292,9 @@ class TextArea():
         '''
         Execute text reading
         
-        @param  saver  Save method
+        @param  saver:()→void         Save method
+        @param  preredrawer:()→void   Method to call before redrawing screen
+        @param  postredrawer:()→void  Method to call after redaring screen
         '''
         
         self.status('unmodified')
@@ -261,7 +303,7 @@ class TextArea():
         override = False
         
         oldy, oldx, oldmark = self.y, self.x, self.mark
-        stored = chr(ord('L') - ord('@'))
+        stored = ctrl('L')
         edited = False
         
         while True:
@@ -285,7 +327,7 @@ class TextArea():
                 stored = None
             if self.alerted:
                 self.alert(None)
-            if ord(d) == ord('@') - ord('@'):
+            if d == ctrl('@'):
                 if self.mark is None:
                     self.mark = self.x
                     self.alert('Mark set')
@@ -298,33 +340,33 @@ class TextArea():
                 else:
                     self.mark = self.x
                     self.alert('Mark set')
-            elif ord(d) == ord('K') - ord('@'):
+            elif d == ctrl('K'):
                 if not self.lines[self.y].kill():
                     self.alert('At end')
                 else:
                     edited = True
-            elif ord(d) == ord('W') - ord('@'):
+            elif d == ctrl('W'):
                 if not self.lines[self.y].cut():
                     self.alert('No text is selected')
                 else:
                     edited = True
-            elif ord(d) == ord('Y') - ord('@'):
+            elif d == ctrl('Y'):
                 if not self.lines[self.y].yank():
                     self.alert('Killring is empty')
                 else:
                     edited = True
-            elif ord(d) == ord('X') - ord('@'):
+            elif d == ctrl('X'):
                 self.alert('C-x')
                 sys.stdout.flush()
                 d = sys.stdin.read(1)
                 self.alert(str(ord(d)))
                 sys.stdout.flush()
-                if ord(d) == ord('X') - ord('@'):
+                if d == ctrl('X'):
                     if self.lines[self.y].swap_mark():
                         self.alert('Mark swapped')
                     else:
                         self.alert('No mark is activated')
-                elif ord(d) == ord('S') - ord('@'):
+                elif d == ctrl('S'):
                     last = ''
                     for row in range(0, len(self.lines)):
                         self.datamap[self.lines[row].name] = self.lines[row].text
@@ -332,7 +374,7 @@ class TextArea():
                     modified = False
                     self.status('unmodified' + (' override' if override else ''))
                     self.alert('Saved')
-                elif ord(d) == ord('C') - ord('@'):
+                elif d == ctrl('C'):
                     break
                 else:
                     stored = d
@@ -341,33 +383,33 @@ class TextArea():
                 if not self.lines[self.y].erase():
                     self.alert('At beginning')
             elif ord(d) < ord(' '):
-                if ord(d) == ord('P') - ord('@'):
+                if d == ctrl('P'):
                     if self.y == 0:
                         self.alert('At first line')
                     else:
                         self.y -= 1
                         self.mark = None
                         self.x = 0
-                elif ord(d) == ord('N') - ord('@'):
+                elif d == ctrl('N'):
                     if self.y < len(self.lines) - 1:
                         self.y += 1
                         self.mark = None
                         self.x = 0
                     else:
                         self.alert('At last line')
-                elif ord(d) == ord('F') - ord('@'):
+                elif d == ctrl('F'):
                     if not self.lines[self.y].move_point(1):
                         self.alert('At end')
-                elif ord(d) == ord('E') - ord('@'):
+                elif d == ctrl('E'):
                     if not self.lines[self.y].move_point(len(self.lines[self.y].text) - self.x):
                         self.alert('At end')
-                elif ord(d) == ord('B') - ord('@'):
+                elif d == ctrl('B'):
                     if not self.lines[self.y].move_point(-1):
                         self.alert('At beginning')
-                elif ord(d) == ord('A') - ord('@'):
+                elif d == ctrl('A'):
                     if not self.lines[self.y].move_point(-self.x):
                         self.alert('At beginning')
-                elif ord(d) == ord('L') - ord('@'):
+                elif d == ctrl('L'):
                     print('\033[H\033[2J', end='')
                     preredrawer()
                     for line in self.lines:
@@ -375,7 +417,7 @@ class TextArea():
                     postredrawer()
                     self.realert()
                     self.restatus()
-                elif ord(d) == ord('D') - ord('@'):
+                elif d == ctrl('D'):
                     if not self.lines[self.y].delete():
                         self.alert('At end')
                     else:
@@ -385,16 +427,16 @@ class TextArea():
                     if d == '[':
                         d = sys.stdin.read(1)
                         if d == 'A':
-                            stored = chr(ord('P') - ord('@'))
+                            stored = ctrl('P'):
                         elif d == 'B':
                             if self.y == len(self.lines) - 1:
                                 self.alert('At last line')
                             else:
-                                stored = chr(ord('N') - ord('@'))
+                                stored = ctrl('N')
                         elif d == 'C':
-                            stored = chr(ord('F') - ord('@'))
+                            stored = ctrl('F')
                         elif d == 'D':
-                            stored = chr(ord('B') - ord('@'))
+                            stored = ctrl('B')
                         elif d == '2':
                             d = sys.stdin.read(1)
                             if d == '~':
@@ -403,35 +445,35 @@ class TextArea():
                         elif d == '3':
                             d = sys.stdin.read(1)
                             if d == '~':
-                                stored = chr(ord('D') - ord('@'))
+                                stored = ctrl('D')
                         elif d == '1':
                             d = sys.stdin.read(1)
                             if d == '~':
-                                stored = chr(ord('A') - ord('@'))
+                                stored = ctrl('A')
                         elif d == '4':
                             d = sys.stdin.read(1)
                             if d == '~':
-                                stored = chr(ord('E') - ord('@'))
+                                stored = ctrl('E')
                         else:
                             while True:
                                 d = sys.stdin.read(1)
-                                if (ord('a') <= ord(d)) and (ord(d) <= ord('z')): break
-                                if (ord('A') <= ord(d)) and (ord(d) <= ord('Z')): break
+                                if ord('a') <= ord(d) <= ord('z'): break
+                                if ord('A') <= ord(d) <= ord('Z'): break
                                 if d == '~': break
                     elif d == 'O':
                         d = sys.stdin.read(1)
                         if d == 'H':
-                            stored = chr(ord('A') - ord('@'))
+                            stored = ctrl('A')
                         elif d == 'F':
-                            stored = chr(ord('E') - ord('@'))
+                            stored = ctrl('E')
                     elif (d == 'w') or (d == 'W'):
                         if not self.lines[self.y].copy():
                             self.alert('No text is selected')
                     elif (d == 'y') or (d == 'Y'):
                         if not self.lines[self.y].yank_cycle():
-                            stored = chr(ord('Y') - ord('@'))
+                            stored = ctrl('Y')
                 elif d == '\n':
-                    stored = chr(ord('N') - ord('@'))
+                    stored = ctrl('N')
             else:
                 insert = d
                 if len(insert) == 0:
