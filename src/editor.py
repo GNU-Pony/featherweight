@@ -22,26 +22,26 @@ import sys
 from subprocess import Popen, PIPE
 
 
-def limit(min_value, value, max_value):
-    '''
-    Limit a value to a closed set
-    
-    @param  min_value  Minimum value
-    @param  value      Preferred value
-    @param  max_value  Maximum value
-    '''
-    return min(max(min_value, value), max_value)
 
+atleast = lambda x, minimum : (x is not None) and (x >= minimum)
+'''
+Test that a value is defined and of at least a minimum value
+'''
 
-def ctrl(key):
-    '''
-    Return the symbol for a specific letter pressed in combination with Ctrl
-    
-    @param   key  Without Ctrl
-    @return       With Ctrl
-    '''
-    return chr(ord(key) - ord('@'))
+limit = lambda x_min, x, x_max : min(max(x_min, x), x_max)
+'''
+Limit a value to a closed set
+'''
 
+ctrl = lambda key : chr(ord(key) - ord('@'))
+'''
+Return the symbol for a specific letter pressed in combination with Ctrl
+'''
+
+backspace = lambda x : (ord(x) == 127) or (ord(x) == 8)
+'''
+Check if a key stroke is a backspace key stroke
+'''
 
 class jump(): ## Lowercase
     '''
@@ -102,14 +102,14 @@ class TextArea():
         def draw(self):
             leftside = '%s\033[%s34m%s:\033[00m' % (jump(self.area.top + self.y, self.area.left), '01;' if self.area.y == self.y else '', self.name)
             text = (self.text[self.area.offx if self.area.y == self.y else 0:] + ' ' * self.area.areawidth)[:self.area.areawidth]
-            if (self.area.y == self.y) and (self.area.mark is not None) and (self.area.mark >= 0):
+            if (self.area.y == self.y) and atleast(self.area.mark, 0):
                 (a, b) = self.area.get_selection(True)
                 if a != b:
                     text = text[:a] + ('\033[44;37m%s\033[00m' % text[a : b]) + text[b:]
             print('%s%s%s' % (leftside, jump(self.area.top + self.y, self.area.left + self.area.innerleft), text), end='')
         
         def copy(self):
-            if (self.area.mark is not None) and (self.area.mark >= 0) and (self.area.mark != self.area.x):
+            if atleast(self.area.mark, 0) and (self.area.mark != self.area.x):
                 (a, b) = self.area.get_selection()
                 self.area.killring.append(self.text[a : b])
                 if len(self.area.killring) > self.area.killmax:
@@ -119,8 +119,7 @@ class TextArea():
                 print('%s%s' % (jump(self.area.top + self.y, self.area.left + self.area.innerleft + a), text), end='')
                 self.area.mark = None
                 return True
-            else:
-                return False
+            return False
         
         def cut(self):
             mark, x = self.area.mark, self.area.x
@@ -128,20 +127,18 @@ class TextArea():
                 self.area.mark, self.area.x = mark, x
                 self.delete()
                 return True
-            else:
-                return False
+            return False
         
         def kill(self):
             if self.area.x < len(self.text):
                 self.area.mark = len(self.text)
                 self.cut()
                 return True
-            else:
-                return False
+            return False
         
         def delete(self):
             removed = 0
-            if (self.area.mark is not None) and (self.area.mark >= 0) and (self.area.mark != self.area.x):
+            if atleaast(self.area.mark, 0) and (self.area.mark != self.area.x):
                 (a, b) = self.area.get_selection()
                 self.text = self.text[:a] + self.text[b:]
                 self.area.x = a
@@ -165,7 +162,7 @@ class TextArea():
             return True
         
         def erase(self):
-            if not ((self.area.mark is not None) and (self.area.mark >= 0) and (self.area.mark != self.area.x)):
+            if not (atleast(self.area.mark, 0) and (self.area.mark != self.area.x)):
                 self.area.mark = None
                 if self.area.x == 0:
                     return False
@@ -228,14 +225,13 @@ class TextArea():
             return False
         
         def swap_mark(self):
-            if (self.area.mark is not None) and (self.area.mark >= 0):
+            if atleast(self.area.mark, 0):
                 self.area.mark, self.area.x = self.area.x, self.area.mark
                 return True
-            else:
-                return False
+            return False
         
         def override(self, insert, override = True):
-            if (self.area.mark is not None) and (self.area.mark >= 0):
+            if atleast(self.area.mark, 0):
                 self.area.mark = ~(self.area.mark)
             if len(insert) == 0:
                 return
@@ -323,25 +319,43 @@ class TextArea():
         stored = ctrl('L')
         edited = False
         
+        def store(key, value_map, required_next = None):
+            nonlocal stored
+            if key in value_map:
+                if required_next is not None:
+                    if sys.stdin.read(1) != required_next:
+                        return True
+                stored = value_map[key]
+                return False
+            return True
+        
+        def edit(method, error_message):
+            nonlocal edited
+            if not method(self.lines[self.y]):
+                self.alert(error_message)
+            else:
+                edited = True
+        
+        def move_point(delta_x, error_message):
+            if not self.lines[self.y].move_point(delta_x):
+                self.alert(error_message)
+        
         while True:
-            if ((oldmark is not None) and (oldmark >= 0)) or ((self.mark is not None) and (self.mark >= 0)):
+            if atleast(oldmark, 0) or atleast(self.mark, 0):
                 self.lines[self.y].draw()
             if self.y != oldy:
                 self.lines[oldy].draw()
                 self.lines[self.y].draw()
                 jump(self.top + self.y, self.left + self.innerleft + self.x - self.offx)()
-            (oldy, oldx, oldmark) = (self.y, self.x, self.mark)
+            oldy, oldx, oldmark = self.y, self.x, self.mark
             if edited:
                 edited = False
                 if not modified:
                     modified = True
                     self.status('modified' + (' override' if override else ''))
             sys.stdout.flush()
-            if stored is None:
-                d = sys.stdin.read(1)
-            else:
-                d = stored
-                stored = None
+            d = sys.stdin.read(1) if stored is None else stored
+            stored = None
             if self.alerted:
                 self.alert(None)
             if d == ctrl('@'):
@@ -349,21 +363,10 @@ class TextArea():
                 elif self.mark == ~(self.x):  self.mark = self.x    ; self.alert('Mark activated')
                 elif self.mark == self.x:     self.mark = ~(self.x) ; self.alert('Mark deactivated')
                 else:                         self.mark = self.x    ; self.alert('Mark set')
-            elif d == ctrl('K'):
-                if not self.lines[self.y].kill():
-                    self.alert('At end')
-                else:
-                    edited = True
-            elif d == ctrl('W'):
-                if not self.lines[self.y].cut():
-                    self.alert('No text is selected')
-                else:
-                    edited = True
-            elif d == ctrl('Y'):
-                if not self.lines[self.y].yank():
-                    self.alert('Killring is empty')
-                else:
-                    edited = True
+            elif backspace(d):    edit(lambda L : L.erase(), 'At beginning')
+            elif d == ctrl('K'):  edit(lambda L : L.kill(),  'At end')
+            elif d == ctrl('W'):  edit(lambda L : L.cut(),   'No text is selected')
+            elif d == ctrl('Y'):  edit(lambda L : L.yank(),  'Killring is empty')
             elif d == ctrl('X'):
                 self.alert('C-x')
                 sys.stdout.flush()
@@ -371,10 +374,7 @@ class TextArea():
                 self.alert(str(ord(d)))
                 sys.stdout.flush()
                 if d == ctrl('X'):
-                    if self.lines[self.y].swap_mark():
-                        self.alert('Mark swapped')
-                    else:
-                        self.alert('No mark is activated')
+                    self.alert('Mark swapped' if self.lines[self.y].swap_mark() else 'No mark is activated')
                 elif d == ctrl('S'):
                     last = ''
                     for row in range(0, len(self.lines)):
@@ -388,9 +388,6 @@ class TextArea():
                 else:
                     stored = d
                     self.alert(None)
-            elif (ord(d) == 127) or (ord(d) == 8):
-                if not self.lines[self.y].erase():
-                    self.alert('At beginning')
             elif ord(d) < ord(' '):
                 if d == ctrl('P'):
                     if self.y == 0:
@@ -406,18 +403,11 @@ class TextArea():
                         self.x = 0
                     else:
                         self.alert('At last line')
-                elif d == ctrl('F'):
-                    if not self.lines[self.y].move_point(1):
-                        self.alert('At end')
-                elif d == ctrl('E'):
-                    if not self.lines[self.y].move_point(len(self.lines[self.y].text) - self.x):
-                        self.alert('At end')
-                elif d == ctrl('B'):
-                    if not self.lines[self.y].move_point(-1):
-                        self.alert('At beginning')
-                elif d == ctrl('A'):
-                    if not self.lines[self.y].move_point(-self.x):
-                        self.alert('At beginning')
+                elif d == ctrl('D'):  edit(lambda L : L.delete(), 'At end')
+                elif d == ctrl('F'):  move_point(1, 'At end')
+                elif d == ctrl('E'):  move_point(len(self.lines[self.y].text) - self.x, 'At end')
+                elif d == ctrl('B'):  move_point(-1, 'At beginning')
+                elif d == ctrl('A'):  move_point(-(self.x), 'At beginning')
                 elif d == ctrl('L'):
                     print('\033[H\033[2J', end='')
                     preredrawer()
@@ -426,11 +416,6 @@ class TextArea():
                     postredrawer()
                     self.realert()
                     self.restatus()
-                elif d == ctrl('D'):
-                    if not self.lines[self.y].delete():
-                        self.alert('At end')
-                    else:
-                        edited = True
                 elif d == '\033':
                     d = sys.stdin.read(1)
                     if d == '[':
@@ -442,47 +427,35 @@ class TextArea():
                                 self.alert('At last line')
                             else:
                                 stored = ctrl('N')
-                        elif d == 'C':  stored = ctrl('F')
-                        elif d == 'D':  stored = ctrl('B')
+                        elif store(d, {'C':ctrl('F'), 'D':ctrl('B')}): pass
                         elif d == '2':
-                            d = sys.stdin.read(1)
-                            if d == '~':
+                            if sys.stdin.read(1) == '~':
                                 override = not override
                                 self.status(('modified' if modified else 'unmodified') + (' override' if override else ''))
-                        elif d == '3':
-                            if sys.stdin.read(1) == '~':  stored = ctrl('D')
-                        elif d == '1':
-                            if sys.stdin.read(1) == '~':  stored = ctrl('A')
-                        elif d == '4':
-                            if sys.stdin.read(1) == '~':  stored = ctrl('E')
+                        elif store(d, {'3':ctrl('D'), '1':ctrl('A'), '4':ctrl('E')}, '~'): pass
                         else:
                             while True:
                                 d = sys.stdin.read(1)
-                                if ord('a') <= ord(d) <= ord('z'): break
-                                if ord('A') <= ord(d) <= ord('Z'): break
+                                if ord('a') <= ord(d.lower()) <= ord('z'): break
                                 if d == '~': break
                     elif d == 'O':
-                        d = sys.stdin.read(1)
-                        if d == 'H':
-                            stored = ctrl('A')
-                        elif d == 'F':
-                            stored = ctrl('E')
-                    elif (d == 'w') or (d == 'W'):
+                        store(sys.stdin.read(1), {'H':ctrl('A'), 'F':ctrl('E')})
+                    elif d.lower() == 'w':
                         if not self.lines[self.y].copy():
                             self.alert('No text is selected')
-                    elif (d == 'y') or (d == 'Y'):
+                    elif d.lower() == 'y':
                         if not self.lines[self.y].yank_cycle():
                             stored = ctrl('Y')
+                        else:
+                            edited = True
                 elif d == '\n':
                     stored = ctrl('N')
             else:
                 insert = d
                 if len(insert) == 0:
                     continue
-                if override:
-                    self.lines[self.y].override(insert)
-                else:
-                    self.lines[self.y].insert(insert)
+                if override:  self.lines[self.y].override(insert)
+                else:         self.lines[self.y].insert(insert)
                 edited = True
 
 
