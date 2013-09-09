@@ -138,7 +138,7 @@ class TextArea():
         
         def delete(self):
             removed = 0
-            if atleaast(self.area.mark, 0) and (self.area.mark != self.area.x):
+            if atleast(self.area.mark, 0) and (self.area.mark != self.area.x):
                 (a, b) = self.area.get_selection()
                 self.text = self.text[:a] + self.text[b:]
                 self.area.x = a
