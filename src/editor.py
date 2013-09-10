@@ -54,8 +54,6 @@ class Jump():
     '''
     def __init__(self, y, x):
         self.string = '\033[%i;%iH' % (y, x)
-        if (y < 0) or (x < 0):
-            raise Exception() ########################## ########################## ########################## ########################## ##########################
     def __str__(self):
         return self.string
     def __call__(self):
