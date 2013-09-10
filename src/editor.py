@@ -140,7 +140,8 @@ class TextArea():
         self.fields, self.datamap, self.left, self.top, self.width, self.height = fields, datamap, left, top, width - 1, height
         self.innerleft = len(max(self.fields, key = len)) + 3
         self.killring = Killring()
-        self.lines = [TextArea.Line(self, self.fields[y], self.datamap[self.fields[y]], y) for y in range(len(self.fields))]
+        data = lambda field : datamap[field] if field in datamap else ''
+        self.lines = [TextArea.Line(self, self.fields[y], data(self.fields[y]), y) for y in range(len(self.fields))]
         self.areawidth = self.width - self.innerleft - self.left + 1
         self.y, self.x, self.offx, self.mark = 0, 0, 0, None
         self.last_alert, self.last_status, self.alerted = None, None, False
@@ -624,7 +625,7 @@ old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'error')[:-1]
 Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
 try:
-    TextArea(['alpha', 'beta'], {'alpha' : 'a', 'beta' : 'be'}, 1, 1, 20, 4).run(phonysaver, phonypreredraw, phonypostredraw)
+    TextArea(['alpha', 'beta'], {}, 1, 1, 20, 4).run(phonysaver, phonypreredraw, phonypostredraw)
 finally:
     print('\033[H\033[2J', end = '')
     sys.stdout.flush()
