@@ -43,7 +43,7 @@ backspace = lambda x : (ord(x) == 127) or (ord(x) == 8)
 Check if a key stroke is a backspace key stroke
 '''
 
-class jump(): ## Lowercase
+class Jump():
     '''
     Create a cursor jump that can either be included in a print statement
     as a string or invoked
@@ -98,16 +98,17 @@ class TextArea():
     class Line():
         def __init__(self, area, name, text, y):
             self.area, self.name, self.text, self.y = area, name, text, y
+            self.jump = lambda x : Jump(self.area.top + self.y, self.area.left + self.area.innerleft + x)
         
         
         def draw(self):
-            leftside = '%s\033[%s34m%s:\033[00m' % (jump(self.area.top + self.y, self.area.left), '01;' if self.area.y == self.y else '', self.name)
+            leftside = '%s\033[%s34m%s:\033[00m' % (self.jump(-(self.area.innerleft)), '01;' if self.area.y == self.y else '', self.name)
             text = (self.text[self.area.offx if self.area.y == self.y else 0:] + ' ' * self.area.areawidth)[:self.area.areawidth]
             if (self.area.y == self.y) and atleast(self.area.mark, 0):
                 (a, b) = self.area.get_selection(True)
                 if a != b:
                     text = text[:a] + ('\033[44;37m%s\033[00m' % text[a : b]) + text[b:]
-            print('%s%s%s' % (leftside, jump(self.area.top + self.y, self.area.left + self.area.innerleft), text), end='')
+            print('%s%s%s' % (leftside, self.jump(0), text), end='')
         
         
         def copy(self):
@@ -123,7 +124,7 @@ class TextArea():
                     self.area.killring[:] = self.area.killring[1:]
                 (a, b) = self.area.get_selection(True)
                 text = self.text[self.area.offx:][:self.area.areawidth][a : b]
-                print('%s%s' % (jump(self.area.top + self.y, self.area.left + self.area.innerleft + a), text), end='')
+                print('%s%s' % (self.jump(a), text), end='')
                 self.area.mark = None
                 return True
             return False
@@ -170,7 +171,7 @@ class TextArea():
                 if self.area.offx > len(self.text):
                     self.area.offx = max(len(self.text) - self.area.areawidth, 0)
                     self.area.mark = None
-                    print('%s%s' % (jump(self.area.top + self.y, self.area.left + self.area.innerleft), ' ' * self.area.areawidth), end='')
+                    print('%s%s' % (self.jump(0), ' ' * self.area.areawidth), end='')
                     self.draw()
                     return True
                 removed = b - a
@@ -182,8 +183,7 @@ class TextArea():
                 self.text = self.text[:self.area.x] + self.text[self.area.x + 1:]
             text = self.text[self.area.offx:][:self.area.areawidth]
             a = limit(0, self.area.x - self.area.offx, self.area.areawidth)
-            left = self.area.left + self.area.innerleft + a
-            print('%s%s%s' % (jump(self.area.top + self.y, left), text[a:] + ' ' * removed, jump(self.area.top + self.y, left)), end='')
+            print('%s%s%s' % (self.jump(a), text[a:] + ' ' * removed, self.jump(a)), end='')
             return True
         
         
@@ -201,7 +201,7 @@ class TextArea():
                 if self.area.x < self.area.offx:
                     self.area.offx = max(self.area.offx - self.area.areawidth, 0)
                     self.draw()
-                    jump(self.area.top + self.y, self.area.left + self.area.innerleft + self.area.x - self.area.offx)()
+                    self.jump(self.area.x - self.area.offx)()
             self.delete()
             return True
         
@@ -223,9 +223,9 @@ class TextArea():
             self.area.x += len(yanked)
             if self.area.x > self.area.offx + self.area.areawidth:
                 self.area.offx = len(self.text) - self.area.areawidth
-            print('%s%s' % (jump(self.area.top + self.y, self.area.left + self.area.innerleft), ' ' * self.area.areawidth), end='')
+            print('%s%s' % (self.jump(0), ' ' * self.area.areawidth), end='')
             self.draw()
-            jump(self.area.top + self.y, self.area.left + self.area.innerleft + self.area.x - self.area.offx)()
+            self.jump(self.area.x - self.area.offx)()
             return True
         
         
@@ -261,14 +261,14 @@ class TextArea():
                         self.area.offx = self.area.x - self.area.areawidth
                         self.area.offx = max(self.area.offx, 0)
                         self.draw()
-                        jump(self.area.top + self.y, self.area.left + self.area.innerleft + self.area.x - self.area.offx)()
+                        self.jump(self.area.x - self.area.offx)()
                     else:
                         print('\033[%iD' % -delta, end='')
                 elif delta > 0:
                     if self.area.x - self.area.offx > self.area.areawidth:
                         self.area.offx = self.area.x
                         self.draw()
-                        jump(self.area.top + self.y, self.area.left + self.area.innerleft)()
+                        self.jump(0)()
                     else:
                         print('\033[%iC' % delta, end='')
                 return delta != 0
@@ -300,17 +300,15 @@ class TextArea():
             self.area.x += len(insert)
             if self.area.x - self.area.offx < self.area.areawidth:
                 if not override:
-                    y = self.area.top + self.y
-                    xi = self.area.left + self.area.innerleft
-                    print('%s\033[%iP' % (jump(y, xi + self.area.areawidth - len(insert)), len(insert)), end='')
-                    print('%s\033[%i@' % (jump(y, xi + oldx - self.area.offx), len(insert)), end='')
+                    print('%s\033[%iP' % (self.jump(self.area.areawidth - len(insert)), len(insert)), end='')
+                    print('%s\033[%i@' % (self.jump(oldx - self.area.offx), len(insert)), end='')
                 print(insert, end='')
             else:
                 self.area.offx = len(self.text) - self.area.areawidth
-                jump(self.area.top + self.y, self.area.left + self.area.innerleft)
+                self.jump(0)()
                 print(' ' * self.area.areawidth, end='')
                 self.draw()
-                jump(self.area.top + self.y, self.area.left + self.area.innerleft + self.area.x - self.area.offx)()
+                self.jump(self.area.x - self.area.offx)()
         
         
         def insert(self, insert):
@@ -327,7 +325,7 @@ class TextArea():
         txt = ' (' + text + ') '
         y = self.top + self.y
         x = self.left + self.innerleft + self.x - self.offx
-        print('%s\033[7m%s-\033[27m%s' % (jump(self.height - 1, 1), txt + '-' * (self.width - len(txt)), jump(y, x)), end='')
+        print('%s\033[7m%s-\033[27m%s' % (Jump(self.height - 1, 1), txt + '-' * (self.width - len(txt)), Jump(y, x)), end='')
         self.last_status = text
     
     def alert(self, text):
@@ -342,7 +340,7 @@ class TextArea():
         else:
             y = self.top + self.y
             x = self.left + self.innerleft + self.x - self.offx
-            print('%s\033[2K%s%s' % (jump(self.height, 1), text, jump(y, x)), end='')
+            print('%s\033[2K%s%s' % (Jump(self.height, 1), text, Jump(y, x)), end='')
             self.alerted = True
         self.last_alert = text
     
@@ -404,7 +402,7 @@ class TextArea():
             if self.y != oldy:
                 self.lines[oldy].draw()
                 self.lines[self.y].draw()
-                jump(self.top + self.y, self.left + self.innerleft + self.x - self.offx)()
+                Jump(self.top + self.y, self.left + self.innerleft + self.x - self.offx)()
             oldy, oldx, oldmark = self.y, self.x, self.mark
             if edited:
                 edited = False
