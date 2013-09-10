@@ -143,7 +143,7 @@ class TextArea():
         data = lambda field : datamap[field] if field in datamap else ''
         self.lines = [TextArea.Line(self, self.fields[y], data(self.fields[y]), y) for y in range(len(self.fields))]
         self.areawidth = self.width - self.innerleft - self.left + 1
-        self.y, self.x, self.offx, self.mark = 0, 0, 0, None
+        self.y, self.offy, self.x, self.offx, self.mark = 0, 0, 0, 0, None
         self.last_alert, self.last_status, self.alerted = None, None, False
     
     
@@ -175,12 +175,12 @@ class TextArea():
             @param  area:TextArea  The text area
             @param  name:str       The name of the, displayed at the left side
             @param  text:str       The text in the line
-            @param  y:int          The y position, 1 based, of the line
+            @param  y:int          The y position of the line
             
             '''
             self.area, self.name, self.text, self.y = area, name, text, y
             self.killring = self.area.killring
-            self.jump = lambda x : Jump(self.area.top + self.y, self.area.left + self.area.innerleft + x)
+            self.jump = lambda x : Jump(self.area.top + self.y - self.area.offy, self.area.left + self.area.innerleft + x)
         
         
         def is_active(self):
@@ -625,7 +625,7 @@ old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'error')[:-1]
 Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
 try:
-    TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubble-ve eks y säta å ä ö').split(' '), {}, 1, 1, 20, 10).run(phonysaver, phonypreredraw, phonypostredraw)
+    TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 1, 1, 20, 10).run(phonysaver, phonypreredraw, phonypostredraw)
 finally:
     print('\033[H\033[2J', end = '')
     sys.stdout.flush()
