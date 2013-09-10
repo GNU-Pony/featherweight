@@ -99,6 +99,7 @@ class TextArea():
         def __init__(self, area, name, text, y):
             self.area, self.name, self.text, self.y = area, name, text, y
         
+        
         def draw(self):
             leftside = '%s\033[%s34m%s:\033[00m' % (jump(self.area.top + self.y, self.area.left), '01;' if self.area.y == self.y else '', self.name)
             text = (self.text[self.area.offx if self.area.y == self.y else 0:] + ' ' * self.area.areawidth)[:self.area.areawidth]
@@ -108,7 +109,13 @@ class TextArea():
                     text = text[:a] + ('\033[44;37m%s\033[00m' % text[a : b]) + text[b:]
             print('%s%s%s' % (leftside, jump(self.area.top + self.y, self.area.left + self.area.innerleft), text), end='')
         
+        
         def copy(self):
+            '''
+            Copy the selected text
+            
+            @return  :bool  Whether any text select, and therefore copied
+            '''
             if atleast(self.area.mark, 0) and (self.area.mark != self.area.x):
                 (a, b) = self.area.get_selection()
                 self.area.killring.append(self.text[a : b])
@@ -121,7 +128,13 @@ class TextArea():
                 return True
             return False
         
+        
         def cut(self):
+            '''
+            Cut the selected text
+            
+            @return  :bool  Whether any text select, and therefore cut
+            '''
             mark, x = self.area.mark, self.area.x
             if self.copy():
                 self.area.mark, self.area.x = mark, x
@@ -129,14 +142,26 @@ class TextArea():
                 return True
             return False
         
+        
         def kill(self):
+            '''
+            Cut all text on the same line after the position of the point
+            
+            @return  :bool  Whether the point was not at the end of the line, and therefore a cut was made
+            '''
             if self.area.x < len(self.text):
                 self.area.mark = len(self.text)
                 self.cut()
                 return True
             return False
         
+        
         def delete(self):
+            '''
+            Delete the selected text or, if none, the character at the position of the point
+            
+            @return  :bool  The point was not at the end of the line or something was selected, and therefore a deletion was made
+            '''
             removed = 0
             if atleast(self.area.mark, 0) and (self.area.mark != self.area.x):
                 (a, b) = self.area.get_selection()
@@ -161,7 +186,13 @@ class TextArea():
             print('%s%s%s' % (jump(self.area.top + self.y, left), text[a:] + ' ' * removed, jump(self.area.top + self.y, left)), end='')
             return True
         
+        
         def erase(self):
+            '''
+            Select the selected text or the character directly before the position of the point
+            
+            @return  :bool  Whether point as at the beginning of the line or any text was selected, and therefore an erasure was made
+            '''
             if not (atleast(self.area.mark, 0) and (self.area.mark != self.area.x)):
                 self.area.mark = None
                 if self.area.x == 0:
@@ -174,7 +205,14 @@ class TextArea():
             self.delete()
             return True
         
+        
         def yank(self, resetptr = True):
+            '''
+            Yank the text from the top of the killring
+            
+            @param   resetpr:bool  Whether to reset the killring's pointer
+            @return  :bool         Whether the killring was not empty, and therefor a yank was made
+            '''
             if len(self.area.killring) == 0:
                 return False
             self.area.mark = None
@@ -190,7 +228,13 @@ class TextArea():
             jump(self.area.top + self.y, self.area.left + self.area.innerleft + self.area.x - self.area.offx)()
             return True
         
+        
         def yank_cycle(self):
+            '''
+            Replace the recently yank text with the next in the killring
+            
+            @return  :bool  False on failure, which happens if the killring is empty or if the text before the point is not the yanked text
+            '''
             if len(self.area.killring) == 0:
                 return False
             yanked = self.area.killring[self.area.killptr]
@@ -202,7 +246,13 @@ class TextArea():
             self.yank(self.area.killptr < 0)
             return True
         
+        
         def move_point(self, delta):
+            '''
+            Move the the point
+            
+            @return  :delta  The number of steps to move the point to the right
+            '''
             x = self.area.x + delta
             if 0 <= x <= len(self.text):
                 self.area.x = x
@@ -224,11 +274,18 @@ class TextArea():
                 return delta != 0
             return False
         
+        
         def swap_mark(self):
+            '''
+            Swap the position of the mark and the position of the point
+            
+            @return  :bool  Whether the mark was set, and therefore as swap was made
+            '''
             if atleast(self.area.mark, 0):
                 self.area.mark, self.area.x = self.area.x, self.area.mark
                 return True
             return False
+        
         
         def override(self, insert, override = True):
             if atleast(self.area.mark, 0):
@@ -254,6 +311,7 @@ class TextArea():
                 print(' ' * self.area.areawidth, end='')
                 self.draw()
                 jump(self.area.top + self.y, self.area.left + self.area.innerleft + self.area.x - self.area.offx)()
+        
         
         def insert(self, insert):
             self.override(insert, False)
