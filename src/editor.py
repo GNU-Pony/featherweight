@@ -625,7 +625,7 @@ old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'error')[:-1]
 Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
 try:
-    TextArea(['alpha', 'beta'], {}, 1, 1, 20, 4).run(phonysaver, phonypreredraw, phonypostredraw)
+    TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubble-ve eks y säta å ä ö').split(' '), {}, 1, 1, 20, 10).run(phonysaver, phonypreredraw, phonypostredraw)
 finally:
     print('\033[H\033[2J', end = '')
     sys.stdout.flush()
