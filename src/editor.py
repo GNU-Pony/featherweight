@@ -558,15 +558,13 @@ class TextArea():
                         self.alert('At first line')
                     else:
                         self.y -= 1
-                        self.mark = None
-                        self.x = 0
+                        self.mark, self.x, self.offx = None, 0, 0
                 elif d == ctrl('N'):
                     if self.y == len(self.lines) - 1:
                         self.alert('At last line')
                     else:
                         self.y += 1
-                        self.mark = None
-                        self.x = 0
+                        self.mark, self.x, self.offx = None, 0, 0
                 elif d == ctrl('D'):  edit(lambda L : L.delete(), 'At end')
                 elif d == ctrl('F'):  move_point(1, 'At end')
                 elif d == ctrl('E'):  move_point(len(self.lines[self.y].text) - self.x, 'At end')
