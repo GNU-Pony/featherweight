@@ -525,11 +525,11 @@ class TextArea():
                     if d == '[':
                         d = sys.stdin.read(1)
                         if store(d, {'C':ctrl('F'), 'D':ctrl('B'), 'A':ctrl('P'), 'B':ctrl('N')}): pass
+                        elif store(d, {'3':ctrl('D'), '1':ctrl('A'), '4':ctrl('E')}, '~'): pass
                         elif d == '2':
                             if sys.stdin.read(1) == '~':
                                 override = not override
                                 self.status(('modified' if modified else 'unmodified') + (' override' if override else ''))
-                        elif store(d, {'3':ctrl('D'), '1':ctrl('A'), '4':ctrl('E')}, '~'): pass
                         else:
                             while True:
                                 d = sys.stdin.read(1)
@@ -567,7 +567,7 @@ old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'error')[:-1]
 Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
 try:
-    TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 1, 1, 20, 10).run(phonysaver, phonypreredraw, phonypostredraw)
+    TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 3, 3, 40, 10).run(phonysaver, phonypreredraw, phonypostredraw)
 finally:
     print('\033[H\033[2J', end = '')
     sys.stdout.flush()
