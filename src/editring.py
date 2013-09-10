@@ -38,6 +38,15 @@ class Edit():
         '''
         self.deleted, self.inserted = deleted, inserted
         self.y, self.old_x, self.new_x = y, old_x, new_x
+    
+    
+    def reverse(self):
+        '''
+        Create a clone of the object but create a mirror object
+        
+        @return  :Edit  The object's opposite
+        '''
+        return Edit(self.inserted, self.deleted, self.y, self.new_x, self.new_y)
 
 
 
@@ -62,4 +71,28 @@ class Editring():
         @return  :bool  Whether the editring is empty
         '''
         return len(self.editring) == 0
-
+    
+    
+    def change_direction(self):
+        '''
+        Swap between undoing and redoing
+        '''
+        self.editdir = -(self.editdir)
+    
+    
+    def push(self, edit):
+        '''
+        Insert a new edit to the editring
+        
+        @param  edit:Edit  The edit to insert
+        '''
+        pass
+    
+    
+    def pop(self):
+        '''
+        Get the next undo or redo
+        
+        @return  :(Edit, bool)  The edit to preform (not reverse) and whether it is a undo
+        '''
+        pass
