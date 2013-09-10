@@ -60,6 +60,7 @@ class Jump():
         print(self.string, end = '')
 
 
+
 class TextArea():
     '''
     GNU Emacs alike text area
@@ -120,14 +121,37 @@ class TextArea():
             self.jump = lambda x : Jump(self.area.top + self.y, self.area.left + self.area.innerleft + x)
         
         
+        def is_active(self):
+            '''
+            Checks if the line is the focused line
+            
+            @return  :bool  Whether the line is the focused line
+            '''
+            return self.area.y == self.y
+        
+        
+        def has_selection(self):
+            '''
+            Checks if there is any text selected, assuming the line is focused
+            
+            @param  :bool  Whether there is any text selected
+            '''
+            return atleast(self.area.mark, 0) and (self.area.mark != self.area.x)
+        
+        
         def draw(self):
-            leftside = '%s\033[%s34m%s:\033[00m' % (self.jump(-(self.area.innerleft)), '01;' if self.area.y == self.y else '', self.name)
-            text = (self.text[self.area.offx if self.area.y == self.y else 0:] + ' ' * self.area.areawidth)[:self.area.areawidth]
-            if (self.area.y == self.y) and atleast(self.area.mark, 0):
+            '''
+            Redraw the line
+            '''
+            leftside = '%s\033[%s34m%s:\033[00m' % (self.jump(-(self.area.innerleft)), '01;' if self.is_active() else '', self.name)
+            text = (self.text[self.area.offx if self.is_active() else 0:] + ' ' * self.area.areawidth)[:self.area.areawidth]
+            if self.is_active() and atleast(self.area.mark, 0):
                 (a, b) = self.area.get_selection(True)
                 if a != b:
                     text = text[:a] + ('\033[44;37m%s\033[00m' % text[a : b]) + text[b:]
             print('%s%s%s' % (leftside, self.jump(0), text), end='')
+            if self.is_active():
+                self.jump(self.area.x - self.area.offx)()
         
         
         def copy(self):
@@ -136,7 +160,7 @@ class TextArea():
             
             @return  :bool  Whether any text select, and therefore copied
             '''
-            if atleast(self.area.mark, 0) and (self.area.mark != self.area.x):
+            if self.has_selection():
                 (a, b) = self.area.get_selection()
                 self.area.killring.append(self.text[a : b])
                 if len(self.area.killring) > self.area.killmax:
@@ -183,7 +207,7 @@ class TextArea():
             @return  :bool  The point was not at the end of the line or something was selected, and therefore a deletion was made
             '''
             removed = 0
-            if atleast(self.area.mark, 0) and (self.area.mark != self.area.x):
+            if self.has_selection():
                 (a, b) = self.area.get_selection()
                 self.text = self.text[:a] + self.text[b:]
                 self.area.x = a
@@ -212,7 +236,7 @@ class TextArea():
             
             @return  :bool  Whether point as at the beginning of the line or any text was selected, and therefore an erasure was made
             '''
-            if not (atleast(self.area.mark, 0) and (self.area.mark != self.area.x)):
+            if not self.has_selection():
                 self.area.mark = None
                 if self.area.x == 0:
                     return False
@@ -432,7 +456,6 @@ class TextArea():
             if self.y != oldy:
                 self.lines[oldy].draw()
                 self.lines[self.y].draw()
-                Jump(self.top + self.y, self.left + self.innerleft + self.x - self.offx)()
             oldy, oldx, oldmark = self.y, self.x, self.mark
             if edited:
                 edited = False
