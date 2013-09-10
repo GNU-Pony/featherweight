@@ -139,9 +139,9 @@ class TextArea():
         '''
         self.fields, self.datamap, self.left, self.top, self.width, self.height = fields, datamap, left, top, width - 1, height
         self.innerleft = len(max(self.fields, key = len)) + 3
+        self.killring = Killring()
         self.lines = [TextArea.Line(self, self.fields[y], self.datamap[self.fields[y]], y) for y in range(len(self.fields))]
         self.areawidth = self.width - self.innerleft - self.left + 1
-        self.killring = Killring()
         self.y, self.x, self.offx, self.mark = 0, 0, 0, None
         self.last_alert, self.last_status, self.alerted = None, None, False
     
