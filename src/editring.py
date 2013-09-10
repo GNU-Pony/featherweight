@@ -86,13 +86,27 @@ class Editring():
         
         @param  edit:Edit  The edit to insert
         '''
-        pass
+        self.editdir = -1
+        self.editring[:] = self.editring[:self.editptr] + [edit] + self.editring[self.editptr:]
+        if len(self.editring) > self.editmax:
+            i = (self.editptr + self.editmax // 2) % self.editmax
+            self.editring[:] = self.editring[:i] + self.editring[i + 1:]
     
     
     def pop(self):
         '''
         Get the next undo or redo
         
-        @return  :(Edit, bool)  The edit to preform (not reverse) and whether it is a undo
+        @return  :(Edit, bool)?  The edit to preform (not reverse) and whether it is a undo
         '''
-        pass
+        if is_empty():
+            return None
+        if self.editptr < 0:
+            self.editptr = min(1, len(self.editring))
+            self.editdir = 1
+        elif self.editptr == len(self.editring):
+            self.editptr = max(1, len(self.editring) - 2)
+            self.editdir = -1
+        edit = self.editring[self.editptr]
+        self.editptr += self.editdir
+        return (edit, True) if self.editdir < 0 else (edit.reverse(), False)
