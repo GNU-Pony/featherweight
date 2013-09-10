@@ -84,7 +84,7 @@ class TextArea():
         self.killring = Killring()
         data = lambda field : datamap[field] if field in datamap else ''
         self.lines = [TextArea.Line(self, self.fields[y], data(self.fields[y]), y) for y in range(len(self.fields))]
-        self.areawidth = self.width - self.innerleft - self.left + 1
+        self.areawidth = self.width - self.innerleft
         self.y, self.offy, self.x, self.offx, self.mark = 0, 0, 0, 0, None
         self.last_alert, self.last_status, self.alerted = None, None, False
     
@@ -301,16 +301,14 @@ class TextArea():
                 self.area.x = x
                 if delta < 0:
                     if self.area.offx > self.area.x:
-                        self.area.offx = max(self.area.x - self.area.areawidth, 0)
+                        self.area.offx = max(self.area.x - 3 * self.area.areawidth // 4, 0)
                         self.draw()
-                        self.jump(self.area.x - self.area.offx)()
                     else:
                         print('\033[%iD' % -delta, end='')
                 elif delta > 0:
                     if self.area.x - self.area.offx > self.area.areawidth:
-                        self.area.offx = self.area.x
+                        self.area.offx = self.area.x - self.area.areawidth // 4
                         self.draw()
-                        self.jump(0)()
                     else:
                         print('\033[%iC' % delta, end='')
                 return delta != 0
@@ -369,7 +367,7 @@ class TextArea():
     
     
     def limit_text(self, text):
-        max_len = self.width - self.left
+        max_len = self.width
         if len(text) > max_len:
             text = text[:max_len - 1] + '…'
         return text
@@ -383,7 +381,7 @@ class TextArea():
         txt = ' (' + text + ') '
         y = self.top + self.y - self.offy
         x = self.left + self.innerleft + self.x - self.offx
-        dashes = max(self.width - len(txt) - self.left, 0)
+        dashes = max(self.width - len(txt), 0)
         Jump(self.top + self.height - 2, self.left)()
         print('\033[7m%s-\033[27m%s' % (self.limit_text(txt + '-' * dashes), Jump(y, x)), end='')
         self.last_status = text
