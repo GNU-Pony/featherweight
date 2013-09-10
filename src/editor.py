@@ -489,10 +489,10 @@ class TextArea():
             if key in value_map:
                 if required_next is not None:
                     if sys.stdin.read(1) != required_next:
-                        return True
+                        return False
                 stored = value_map[key]
-                return False
-            return True
+                return True
+            return False
         
         def edit(method, error_message):
             nonlocal edited
