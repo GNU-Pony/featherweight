@@ -54,6 +54,8 @@ class Jump():
     '''
     def __init__(self, y, x):
         self.string = '\033[%i;%iH' % (y, x)
+        if (y < 0) or (x < 0):
+            raise Exception() ########################## ########################## ########################## ########################## ##########################
     def __str__(self):
         return self.string
     def __call__(self):
@@ -408,7 +410,7 @@ class TextArea():
                     print('%s\033[%i@' % (self.jump(oldx - self.area.offx), len(insert)), end='')
                 print(insert, end='')
             else:
-                self.area.offx = len(self.text) - self.area.areawidth
+                self.area.offx = self.area.x - self.area.areawidth // 4
                 self.jump(0)()
                 print(' ' * self.area.areawidth, end='')
                 self.draw()
