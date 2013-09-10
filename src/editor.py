@@ -357,8 +357,7 @@ class TextArea():
                 self.area.x = x
                 if delta < 0:
                     if self.area.offx > self.area.x:
-                        self.area.offx = self.area.x - self.area.areawidth
-                        self.area.offx = max(self.area.offx, 0)
+                        self.area.offx = max(self.area.x - self.area.areawidth, 0)
                         self.draw()
                         self.jump(self.area.x - self.area.offx)()
                     else:
@@ -562,12 +561,12 @@ class TextArea():
                         self.mark = None
                         self.x = 0
                 elif d == ctrl('N'):
-                    if self.y < len(self.lines) - 1:
+                    if self.y == len(self.lines) - 1:
+                        self.alert('At last line')
+                    else:
                         self.y += 1
                         self.mark = None
                         self.x = 0
-                    else:
-                        self.alert('At last line')
                 elif d == ctrl('D'):  edit(lambda L : L.delete(), 'At end')
                 elif d == ctrl('F'):  move_point(1, 'At end')
                 elif d == ctrl('E'):  move_point(len(self.lines[self.y].text) - self.x, 'At end')
@@ -585,14 +584,7 @@ class TextArea():
                     d = sys.stdin.read(1)
                     if d == '[':
                         d = sys.stdin.read(1)
-                        if d == 'A':
-                            stored = ctrl('P')
-                        elif d == 'B':
-                            if self.y == len(self.lines) - 1:
-                                self.alert('At last line')
-                            else:
-                                stored = ctrl('N')
-                        elif store(d, {'C':ctrl('F'), 'D':ctrl('B')}): pass
+                        if store(d, {'C':ctrl('F'), 'D':ctrl('B'), 'A':ctrl('P'), 'B':ctrl('N')}): pass
                         elif d == '2':
                             if sys.stdin.read(1) == '~':
                                 override = not override
