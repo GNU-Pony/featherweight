@@ -87,6 +87,12 @@ class TextArea():
     
     
     def get_selection(self, for_display = False):
+        '''
+        Get the selected texts start and end on the X-axis
+        
+        @param  for_display:bool         Whether to translate to screen position rather than, excluding the left inset
+        @param  (start, end):(int, int)  The start and end
+        '''
         a = min(self.mark, self.x)
         b = max(self.mark, self.x)
         if for_display:
@@ -96,7 +102,20 @@ class TextArea():
     
     
     class Line():
+        '''
+        A line in the text area
+        '''
+        
         def __init__(self, area, name, text, y):
+            '''
+            Constructor
+            
+            @param  area:TextArea  The text area
+            @param  name:str       The name of the, displayed at the left side
+            @param  text:str       The text in the line
+            @param  y:int          The y position, 1 based, of the line
+            
+            '''
             self.area, self.name, self.text, self.y = area, name, text, y
             self.jump = lambda x : Jump(self.area.top + self.y, self.area.left + self.area.innerleft + x)
         
@@ -288,6 +307,12 @@ class TextArea():
         
         
         def override(self, insert, override = True):
+            '''
+            Insert a text (by default) by overriding the existing text at the position of the point
+            
+            @param  insert:str     The text to insert
+            @param  override:bool  Whether to override
+            '''
             if atleast(self.area.mark, 0):
                 self.area.mark = ~(self.area.mark)
             if len(insert) == 0:
@@ -312,6 +337,11 @@ class TextArea():
         
         
         def insert(self, insert):
+            '''
+            Insert a text at the position of the point
+            
+            @param  insert:str  The text to insert
+            '''
             self.override(insert, False)
     
     
