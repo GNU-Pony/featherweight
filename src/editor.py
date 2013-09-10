@@ -412,7 +412,6 @@ class TextArea():
                 self.jump(0)()
                 print(' ' * self.area.areawidth, end='')
                 self.draw()
-                self.jump(self.area.x - self.area.offx)()
         
         
         def insert(self, insert):
