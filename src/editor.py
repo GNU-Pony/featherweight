@@ -61,6 +61,66 @@ class Jump():
 
 
 
+class Killring():
+    '''
+    Killring class
+    '''
+    
+    def __init__(self, limit = 50):
+        '''
+        Constructor
+        
+        @param  limit:int  The maximum size of the killring
+        '''
+        self.killring, self.killmax, self.killptr = [], limit, 0
+    
+    
+    def add(self, text):
+        '''
+        Add a text to the killring
+        
+        @param  text:str  The text to add
+        '''
+        self.killring.append(text)
+        if len(self.killring) > self.killmax:
+            self.killring[:] = self.killring[1:]
+    
+    
+    def is_empty(self):
+        '''
+        Checks if the killring is empty
+        
+        @return  :bool  Whether the killring is empty
+        '''
+        return len(self.killring) == 0
+    
+    
+    def reset(self):
+        '''
+        Resets the killring pointer
+        '''
+        self.killptr = len(self.killring) - 1
+    
+    
+    def next(self):
+        '''
+        Get to the next item in the killring
+        '''
+        self.killptr -= 1
+        if self.killptr < 0:
+            self.killptr += len(self.killring)
+    
+    
+    def get(self):
+        '''
+        Gets the current item in the killring
+        
+        @return  :str  The current item in the killring
+        '''
+        return self.killring[self.killptr]
+
+
+
 class TextArea():
     '''
     GNU Emacs alike text area
@@ -81,7 +141,7 @@ class TextArea():
         self.innerleft = len(max(self.fields, key = len)) + 3
         self.lines = [TextArea.Line(self, self.fields[y], self.datamap[self.fields[y]], y) for y in range(len(self.fields))]
         self.areawidth = self.width - self.innerleft - self.left + 1
-        self.killring, self.killmax, self.killptr = [], 50, 0
+        self.killring = Killring()
         self.y, self.x, self.offx, self.mark = 0, 0, 0, None
         self.last_alert, self.last_status, self.alerted = None, None, False
     
@@ -118,6 +178,7 @@ class TextArea():
             
             '''
             self.area, self.name, self.text, self.y = area, name, text, y
+            self.killring = self.area.killring
             self.jump = lambda x : Jump(self.area.top + self.y, self.area.left + self.area.innerleft + x)
         
         
@@ -162,9 +223,7 @@ class TextArea():
             '''
             if self.has_selection():
                 (a, b) = self.area.get_selection()
-                self.area.killring.append(self.text[a : b])
-                if len(self.area.killring) > self.area.killmax:
-                    self.area.killring[:] = self.area.killring[1:]
+                self.killring.add(self.text[a : b])
                 (a, b) = self.area.get_selection(True)
                 text = self.text[self.area.offx:][:self.area.areawidth][a : b]
                 print('%s%s' % (self.jump(a), text), end='')
@@ -249,20 +308,17 @@ class TextArea():
             return True
         
         
-        def yank(self, resetptr = True):
+        def yank(self):
             '''
             Yank the text from the top of the killring
             
-            @param   resetpr:bool  Whether to reset the killring's pointer
-            @return  :bool         Whether the killring was not empty, and therefor a yank was made
+            @return  :bool  Whether the killring was not empty, and therefor a yank was made
             '''
-            if len(self.area.killring) == 0:
+            if self.killring.is_empty():
                 return False
             self.area.mark = None
-            if resetptr:
-                self.area.killptr = len(self.area.killring) - 1
-            yanked = self.area.killring[self.area.killptr]
-            self.text = self.text[:self.area.x] + self.area.killring[self.area.killptr] + self.text[self.area.x:]
+            yanked = self.killring.get()
+            self.text = self.text[:self.area.x] + yanked + self.text[self.area.x:]
             self.area.x += len(yanked)
             if self.area.x > self.area.offx + self.area.areawidth:
                 self.area.offx = len(self.text) - self.area.areawidth
@@ -278,15 +334,15 @@ class TextArea():
             
             @return  :bool  False on failure, which happens if the killring is empty or if the text before the point is not the yanked text
             '''
-            if len(self.area.killring) == 0:
+            if self.killring.is_empty():
                 return False
-            yanked = self.area.killring[self.area.killptr]
+            yanked = self.killring.get()
             if self.text[max(self.area.x - len(yanked), 0) : self.area.x] != yanked:
                 return False
             self.area.mark = self.area.x - len(yanked)
             self.delete()
-            self.area.killptr -= 1
-            self.yank(self.area.killptr < 0)
+            self.killring.next()
+            self.yank()
             return True
         
         
