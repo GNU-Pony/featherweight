@@ -427,8 +427,6 @@ class TextArea():
         @param  postredrawer:()→void  Method to call after redaring screen
         '''
         
-        self.status('unmodified')
-        
         modified = False
         override = False
         
@@ -458,8 +456,14 @@ class TextArea():
                 self.alert(error_message)
         
         def update_status():
-            self.status(('modified' if modified else 'unmodified') + (' override' if override else ''))
+            below = len(self.lines) + 2 - self.height
+            mode_text = 'modified' if modified else 'unmodified'
+            ins_text = ' override' if override else ''
+            above = ' +%i↑' % self.offy if self.offy > 0 else ''
+            below = ' +%i↓' % below if below > 0 else ''
+            self.status(mode_text + ins_text + above + below)
         
+        update_status()
         while True:
             if atleast(oldmark, 0) or atleast(self.mark, 0):
                 self.lines[self.y].draw()
