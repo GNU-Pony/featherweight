@@ -488,7 +488,33 @@ class TextArea():
             stored = None
             if self.alerted:
                 self.alert(None)
-            if d == ctrl('@'):
+            if d == -1: # page up
+                if self.y == 0:
+                    self.alert('At first line')
+                elif self.y == self.offy:
+                    self.offy -= self.height - 2
+                    self.offy = max(0, self.offy)
+                    self.y = self.offy
+                    update_status()
+                    stored = ctrl('L')
+                    self.mark, self.x, self.offx = None, 0, 0
+                else:
+                    self.y = self.offy
+                    self.mark, self.x, self.offx = None, 0, 0
+            elif d == -2: # page down
+                if self.y == len(self.lines) - 1:
+                    self.alert('At last line')
+                elif self.y == self.offy + self.height - 3:
+                    self.y += self.height - 2
+                    self.y = min(self.y, len(self.lines) - 1)
+                    self.offy = max(0, self.y - self.height + 3)
+                    update_status()
+                    stored = ctrl('L')
+                    self.mark, self.x, self.offx = None, 0, 0
+                else:
+                    self.y = self.offy + self.height - 3
+                    self.mark, self.x, self.offx = None, 0, 0
+            elif d == ctrl('@'):
                 if   self.mark is None:       self.mark = self.x    ; self.alert('Mark set')
                 elif self.mark == ~(self.x):  self.mark = self.x    ; self.alert('Mark activated')
                 elif self.mark == self.x:     self.mark = ~(self.x) ; self.alert('Mark deactivated')
@@ -553,7 +579,7 @@ class TextArea():
                     if d == '[':
                         d = sys.stdin.read(1)
                         if store(d, {'C':ctrl('F'), 'D':ctrl('B'), 'A':ctrl('P'), 'B':ctrl('N')}): pass
-                        elif store(d, {'3':ctrl('D'), '1':ctrl('A'), '4':ctrl('E')}, '~'): pass
+                        elif store(d, {'3':ctrl('D'), '1':ctrl('A'), '4':ctrl('E'), '5':-1, '6':-2}, '~'): pass
                         elif d == '2':
                             if sys.stdin.read(1) == '~':
                                 override = not override
@@ -565,6 +591,7 @@ class TextArea():
                                 if d == '~': break
                     elif d == 'O':
                         store(sys.stdin.read(1), {'H':ctrl('A'), 'F':ctrl('E')})
+                    elif store(d, {'P':-1, 'p':-1, 'N':-2, 'n':-2}): pass
                     elif d.lower() == 'w':
                         if not self.lines[self.y].copy():
                             self.alert('No text is selected')
