@@ -20,6 +20,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 
+
+class Edit():
+    '''
+    A line edit
+    '''
+    
+    def __init__(self, deleted, inserted, y, old_x, new_x):
+        '''
+        Constructor
+        
+        @param  deleted:str?   The text deleted by the edit
+        @param  inserted:str?  The text inserted by the edit
+        @param  y:int          The index of the line the edit was made one
+        @param  old_x:int      The position on the line before the edit was made
+        @param  new_x:int      The position on the line after the edit was made
+        '''
+        self.deleted, self.inserted = deleted, inserted
+        self.y, self.old_x, self.new_x = y, old_x, new_x
+
+
+
 class Editring():
     '''
     Editing ring class
