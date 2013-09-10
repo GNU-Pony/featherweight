@@ -147,15 +147,16 @@ class TextArea():
             '''
             Redraw the line
             '''
-            leftside = '%s\033[%s34m%s:\033[00m' % (self.jump(-(self.area.innerleft)), '01;' if self.is_active() else '', self.name)
-            text = (self.text[self.area.offx if self.is_active() else 0:] + ' ' * self.area.areawidth)[:self.area.areawidth]
-            if self.is_active() and atleast(self.area.mark, 0):
-                (a, b) = self.area.get_selection(True)
-                if a != b:
-                    text = text[:a] + ('\033[44;37m%s\033[00m' % text[a : b]) + text[b:]
-            print('%s%s%s' % (leftside, self.jump(0), text), end='')
-            if self.is_active():
-                self.jump(self.area.x - self.area.offx)()
+            if 0 <= self.y - self.area.offy < self.area.height - 2:
+                leftside = '%s\033[%s34m%s:\033[00m' % (self.jump(-(self.area.innerleft)), '01;' if self.is_active() else '', self.name)
+                text = (self.text[self.area.offx if self.is_active() else 0:] + ' ' * self.area.areawidth)[:self.area.areawidth]
+                if self.is_active() and atleast(self.area.mark, 0):
+                    (a, b) = self.area.get_selection(True)
+                    if a != b:
+                        text = text[:a] + ('\033[44;37m%s\033[00m' % text[a : b]) + text[b:]
+                print('%s%s%s' % (leftside, self.jump(0), text), end='')
+                if self.is_active():
+                    self.jump(self.area.x - self.area.offx)()
         
         
         def copy(self):
@@ -383,7 +384,7 @@ class TextArea():
         y = self.top + self.y - self.offy
         x = self.left + self.innerleft + self.x - self.offx
         dashes = max(self.width - len(txt) - self.left, 0)
-        Jump(self.top + self.height - 1, self.left)()
+        Jump(self.top + self.height - 2, self.left)()
         print('\033[7m%s-\033[27m%s' % (self.limit_text(txt + '-' * dashes), Jump(y, x)), end='')
         self.last_status = text
     
@@ -399,7 +400,7 @@ class TextArea():
         else:
             y = self.top + self.y - self.offy
             x = self.left + self.innerleft + self.x - self.offx
-            Jump(self.top + self.height, self.left)()
+            Jump(self.top + self.height - 1, self.left)()
             print('\033[2K%s%s' % (self.limit_text(text), Jump(y, x)), end='')
             self.alerted = True
         self.last_alert = text
@@ -456,6 +457,9 @@ class TextArea():
             if not self.lines[self.y].move_point(delta_x):
                 self.alert(error_message)
         
+        def update_status():
+            self.status(('modified' if modified else 'unmodified') + (' override' if override else ''))
+        
         while True:
             if atleast(oldmark, 0) or atleast(self.mark, 0):
                 self.lines[self.y].draw()
@@ -467,7 +471,7 @@ class TextArea():
                 edited = False
                 if not modified:
                     modified = True
-                    self.status('modified' + (' override' if override else ''))
+                    update_status()
             sys.stdout.flush()
             d = sys.stdin.read(1) if stored is None else stored
             stored = None
@@ -496,7 +500,7 @@ class TextArea():
                         self.datamap[self.lines[row].name] = self.lines[row].text
                     saver()
                     modified = False
-                    self.status('unmodified' + (' override' if override else ''))
+                    update_status()
                     self.alert('Saved')
                 elif d == ctrl('C'):
                     break
@@ -510,12 +514,14 @@ class TextArea():
                     else:
                         self.y -= 1
                         self.mark, self.x, self.offx = None, 0, 0
+                        update_status()
                 elif d == ctrl('N'):
                     if self.y == len(self.lines) - 1:
                         self.alert('At last line')
                     else:
                         self.y += 1
                         self.mark, self.x, self.offx = None, 0, 0
+                        update_status()
                 elif d == ctrl('D'):  edit(lambda L : L.delete(), 'At end')
                 elif d == ctrl('F'):  move_point(1, 'At end')
                 elif d == ctrl('E'):  move_point(len(self.lines[self.y].text) - self.x, 'At end')
@@ -538,7 +544,7 @@ class TextArea():
                         elif d == '2':
                             if sys.stdin.read(1) == '~':
                                 override = not override
-                                self.status(('modified' if modified else 'unmodified') + (' override' if override else ''))
+                                update_status()
                         else:
                             while True:
                                 d = sys.stdin.read(1)
@@ -576,7 +582,7 @@ old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'error')[:-1]
 Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
 try:
-    TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 3, 3, 40, 10).run(phonysaver, phonypreredraw, phonypostredraw)
+    TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 6, 4, 40, 10).run(phonysaver, phonypreredraw, phonypostredraw)
 finally:
     print('\033[H\033[2J', end = '')
     sys.stdout.flush()
