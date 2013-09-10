@@ -367,6 +367,12 @@ class TextArea():
     
     
     
+    def limit_text(self, text):
+        max_len = self.width - self.left
+        if len(text) > max_len:
+            text = text[:max_len - 1] + '…'
+        return text
+    
     def status(self, text):
         '''
         Print a message to the status bar
@@ -374,9 +380,11 @@ class TextArea():
         @param  text:str  The message
         '''
         txt = ' (' + text + ') '
-        y = self.top + self.y
+        y = self.top + self.y - self.offy
         x = self.left + self.innerleft + self.x - self.offx
-        print('%s\033[7m%s-\033[27m%s' % (Jump(self.height - 1, 1), txt + '-' * (self.width - len(txt)), Jump(y, x)), end='')
+        dashes = max(self.width - len(txt) - self.left, 0)
+        Jump(self.top + self.height - 1, self.left)()
+        print('\033[7m%s-\033[27m%s' % (self.limit_text(txt + '-' * dashes), Jump(y, x)), end='')
         self.last_status = text
     
     def alert(self, text):
@@ -389,9 +397,10 @@ class TextArea():
             self.alert('')
             self.alerted = False
         else:
-            y = self.top + self.y
+            y = self.top + self.y - self.offy
             x = self.left + self.innerleft + self.x - self.offx
-            print('%s\033[2K%s%s' % (Jump(self.height, 1), text, Jump(y, x)), end='')
+            Jump(self.top + self.height, self.left)()
+            print('\033[2K%s%s' % (self.limit_text(text), Jump(y, x)), end='')
             self.alerted = True
         self.last_alert = text
     
