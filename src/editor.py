@@ -454,12 +454,21 @@ class TextArea():
                 self.alert(error_message)
         
         def update_status():
-            below = len(self.lines) + 2 - self.height
+            below = len(self.lines) - (self.offy + self.height - 2)
             mode_text = 'modified' if modified else 'unmodified'
             ins_text = ' override' if override else ''
             above = ' +%i↑' % self.offy if self.offy > 0 else ''
             below = ' +%i↓' % below if below > 0 else ''
             self.status(mode_text + ins_text + above + below)
+        
+        def ensure_y():
+            nonlocal stored
+            if self.y - self.offy < 0:
+                self.offy -= 1
+            if self.y - self.offy >= self.height - 2:
+                self.offy += 1
+            update_status()
+            stored = ctrl('L')
         
         update_status()
         while True:
@@ -515,6 +524,7 @@ class TextArea():
                         self.alert('At first line')
                     else:
                         self.y -= 1
+                        ensure_y()
                         self.mark, self.x, self.offx = None, 0, 0
                         update_status()
                 elif d == ctrl('N'):
@@ -522,6 +532,7 @@ class TextArea():
                         self.alert('At last line')
                     else:
                         self.y += 1
+                        ensure_y()
                         self.mark, self.x, self.offx = None, 0, 0
                         update_status()
                 elif d == ctrl('D'):  edit(lambda L : L.delete(), 'At end')
