@@ -417,13 +417,13 @@ class TextArea():
         self.alert(self.last_alert)
     
     
-    def run(self, saver, preredrawer, postredrawer):
+    def run(self, saver, preredrawer = None, postredrawer = None):
         '''
         Execute text reading
         
-        @param  saver:()→void         Save method
-        @param  preredrawer:()→void   Method to call before redrawing screen
-        @param  postredrawer:()→void  Method to call after redaring screen
+        @param  saver:()→void          Save method
+        @param  preredrawer:()?→void   Method to call before redrawing screen
+        @param  postredrawer:()?→void  Method to call after redaring screen
         '''
         
         modified = False
@@ -435,10 +435,12 @@ class TextArea():
         
         def redraw():
             print('\033[H\033[2J', end='')
-            preredrawer()
+            if preredrawer is not None:
+                preredrawer()
             for line in self.lines:
                 line.draw()
-            postredrawer()
+            if postredrawer is not None:
+                postredrawer()
             self.realert()
             self.restatus()
         
@@ -641,16 +643,12 @@ class TextArea():
 
 def phonysaver():
     pass
-def phonypreredraw():
-    pass
-def phonypostredraw():
-    pass
 print('\033[H\033[2J')
 old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'error')[:-1]
 Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
 try:
-    TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 6, 4, 40, 10).run(phonysaver, phonypreredraw, phonypostredraw)
+    TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 6, 4, 40, 10).run(phonysaver)
 finally:
     print('\033[H\033[2J', end = '')
     sys.stdout.flush()
