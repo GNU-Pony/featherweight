@@ -97,11 +97,14 @@ class TextArea():
     
     
     
-    def initialise(self):
+    def initialise(self, initalise_terminal):
         '''
         Initialise terminal and TTY settings
         '''
-        print('\033[H\033[2J')
+        self.initalise_terminal = initalise_terminal
+        if initalise_terminal:
+            print('\033[?1049h', end='', flush=True)
+        print('\033[H\033[2J', end='', flush=True)
         self.old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
         self.old_stty = self.old_stty.decode('utf-8', 'error')[:-1]
         Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
@@ -110,9 +113,11 @@ class TextArea():
         '''
         Restore the terminal to the state before `initialise` as invoked
         '''
-        print('\033[H\033[2J', end = '')
         sys.stdout.flush()
         Popen(['stty', self.old_stty], stdout = PIPE).communicate()
+        print('\033[H\033[2J', end='', flush=True)
+        if self.initalise_terminal:
+            print('\033[?1049l', end='', flush=True)
     
     
     
@@ -673,7 +678,7 @@ def phonysaver():
 area = None
 try:
     area = TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 6, 4, 40, 10)
-    area.initialise()
+    area.initialise(True)
     area.run(phonysaver)
 finally:
     if area is not None:
