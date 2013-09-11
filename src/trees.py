@@ -344,22 +344,14 @@ class Tree():
             elif buf.endswith(chr(ord('L') - ord('@'))):
                 self.draw_force = True
                 self.print_tree()
-            elif buf.endswith('q'):
-                return ('quit', None)
-            elif buf.endswith('e'):
-                return ('edit', self.select_stack[-1][0])
-            elif buf.endswith('+'):
-                return ('add', self.select_stack[-1][0])
-            elif buf.endswith('d'):
-                return ('delete', self.select_stack[-1][0])
-            elif buf.endswith('r'):
-                return ('read', self.select_stack[-1][0])
-            elif buf.endswith('R'):
-                return ('unread', self.select_stack[-1][0])
+            elif buf.endswith('q'):   return ('quit',   None)
+            elif buf.endswith('e'):   return ('edit',   self.select_stack[-1][0])
+            elif buf.endswith('+'):   return ('add',    self.select_stack[-1][0])
+            elif buf.endswith('d'):   return ('delete', self.select_stack[-1][0])
+            elif buf.endswith('r'):   return ('read',   self.select_stack[-1][0])
+            elif buf.endswith('R'):   return ('unread', self.select_stack[-1][0])
+            elif buf.endswith('\t'):  return ('back',   None)
+            elif buf.endswith('\n'):  return ('open',   self.select_stack[-1][0])
             elif (buf[-3] != '\033' or buf[-2] != '[') and (buf[-5] != '\033' or buf[-4] != '[' or buf[-2] != ';') and (ord('0') <= ord(buf[-1]) <= ord('9')):
                 return (buf[-1], self.select_stack[-1][0])
-            elif buf.endswith('\t'):
-                return ('back', None)
-            elif buf.endswith('\n'):
-                return ('open', self.select_stack[-1][0])
 
