@@ -21,6 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 from subprocess import Popen, PIPE
 
+import gettext
+gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
+gettext.textdomain('@PKGNAME@')
+_ = gettext.gettext
+
 from killring import *
 from editring import *
 
@@ -66,7 +71,6 @@ class Jump():
 ## TODO  additional key combinations  C-<left>/M-b=prev-word  C-<right>/M-a=next-word  C-<up>=page-up  C-<down>=page-down
 ## TODO  colours should be configurable with rc file
 ## TODO  ring limits should be configurable with rc file
-## TODO  gettext (or similar) should be usd for localisation
 ## TODO  widthless characters should be ignored when calculating the size a text
 class TextArea():
     '''
@@ -500,8 +504,8 @@ class TextArea():
         
         def update_status():
             below = len(self.lines) - (self.offy + self.height - 2)
-            mode_text = 'modified' if modified else 'unmodified'
-            ins_text = ' override' if override else ''
+            mode_text = _('modified' if modified else 'unmodified')
+            ins_text = (' ' + _('override')) if override else ''
             above = ' +%i↑' % self.offy if self.offy > 0 else ''
             below = ' +%i↓' % below if below > 0 else ''
             self.status(mode_text + ins_text + above + below)
@@ -535,7 +539,7 @@ class TextArea():
                 self.alert(None)
             if d == -1: # page up
                 if self.y == 0:
-                    self.alert('At first line')
+                    self.alert(_('At first line'))
                 elif self.y == self.offy:
                     self.offy -= self.height - 2
                     self.offy = max(0, self.offy)
@@ -548,7 +552,7 @@ class TextArea():
                     self.mark, self.x, self.offx = None, 0, 0
             elif d == -2: # page down
                 if self.y == len(self.lines) - 1:
-                    self.alert('At last line')
+                    self.alert(_('At last line'))
                 elif self.y == self.offy + self.height - 3:
                     self.y += self.height - 2
                     self.y = min(self.y, len(self.lines) - 1)
@@ -560,21 +564,21 @@ class TextArea():
                     self.y = self.offy + self.height - 3
                     self.mark, self.x, self.offx = None, 0, 0
             elif d == ctrl('@'):
-                if   self.mark is None:       self.mark = self.x    ; self.alert('Mark set')
-                elif self.mark == ~(self.x):  self.mark = self.x    ; self.alert('Mark activated')
-                elif self.mark == self.x:     self.mark = ~(self.x) ; self.alert('Mark deactivated')
-                else:                         self.mark = self.x    ; self.alert('Mark set')
-            elif backspace(d):    edit(lambda L : L.erase(), 'At beginning')
-            elif d == ctrl('K'):  edit(lambda L : L.kill(),  'At end')
-            elif d == ctrl('W'):  edit(lambda L : L.cut(),   'No text is selected')
-            elif d == ctrl('Y'):  edit(lambda L : L.yank(),  'Killring is empty')
+                if   self.mark is None:       self.mark = self.x    ; self.alert(_('Mark set'))
+                elif self.mark == ~(self.x):  self.mark = self.x    ; self.alert(_('Mark activated'))
+                elif self.mark == self.x:     self.mark = ~(self.x) ; self.alert(_('Mark deactivated'))
+                else:                         self.mark = self.x    ; self.alert(_('Mark set'))
+            elif backspace(d):    edit(lambda L : L.erase(), _('At beginning'))
+            elif d == ctrl('K'):  edit(lambda L : L.kill(),  _('At end'))
+            elif d == ctrl('W'):  edit(lambda L : L.cut(),   _('No text is selected'))
+            elif d == ctrl('Y'):  edit(lambda L : L.yank(),  _('Killring is empty'))
             elif d == ctrl('R'):  self.editring.change_direction()
             elif d in (ctrl('_'), ctrl('U')):
                 if self.editring.is_empty():
-                    self.alert('Nothing to undo')
+                    self.alert(_('Nothing to undo'))
                 else:
                     (edit, undo) = self.editring.pop()
-                    self.alert('Undo!' if undo else 'Redo!')
+                    self.alert(_('Undo!' if undo else 'Redo!'))
                     fix_offx = not (self.offx <= edit.x < self.offx + self.areawidth)
                     text = self.lines[edit.y]
                     if edit.deleted is not None:
@@ -600,7 +604,7 @@ class TextArea():
                 self.alert(str(ord(d)))
                 sys.stdout.flush()
                 if d == ctrl('X'):
-                    self.alert('Mark swapped' if self.lines[self.y].swap_mark() else 'No mark is activated')
+                    self.alert(_('Mark swapped' if self.lines[self.y].swap_mark() else 'No mark is activated'))
                 elif d == ctrl('S'):
                     last = ''
                     for row in range(0, len(self.lines)):
@@ -608,9 +612,9 @@ class TextArea():
                     if saver():
                         modified = False
                         update_status()
-                        self.alert('Saved')
+                        self.alert(_('Saved'))
                     else:
-                        self.alert('Failed to save!')
+                        self.alert(_('Failed to save!'))
                 elif d == ctrl('C'):
                     break
                 else:
@@ -619,7 +623,7 @@ class TextArea():
             elif ord(d) < ord(' '):
                 if d == ctrl('P'):
                     if self.y == 0:
-                        self.alert('At first line')
+                        self.alert(_('At first line'))
                     else:
                         self.y -= 1
                         ensure_y()
@@ -627,17 +631,17 @@ class TextArea():
                         update_status()
                 elif d == ctrl('N'):
                     if self.y == len(self.lines) - 1:
-                        self.alert('At last line')
+                        self.alert(_('At last line'))
                     else:
                         self.y += 1
                         ensure_y()
                         self.mark, self.x, self.offx = None, 0, 0
                         update_status()
-                elif d == ctrl('D'):  edit(lambda L : L.delete(), 'At end')
-                elif d == ctrl('F'):  move_point(1, 'At end')
-                elif d == ctrl('E'):  move_point(len(self.lines[self.y].text) - self.x, 'At end')
-                elif d == ctrl('B'):  move_point(-1, 'At beginning')
-                elif d == ctrl('A'):  move_point(-(self.x), 'At beginning')
+                elif d == ctrl('D'):  edit(lambda L : L.delete(), _('At end'))
+                elif d == ctrl('F'):  move_point(1, _('At end'))
+                elif d == ctrl('E'):  move_point(len(self.lines[self.y].text) - self.x, _('At end'))
+                elif d == ctrl('B'):  move_point(-1, _('At beginning'))
+                elif d == ctrl('A'):  move_point(-(self.x), _('At beginning'))
                 elif d == ctrl('L'):  redraw()
                 elif d == '\033':
                     d = sys.stdin.read(1)
@@ -659,7 +663,7 @@ class TextArea():
                     elif store(d, {'P':-1, 'p':-1, 'N':-2, 'n':-2}): pass
                     elif d.lower() == 'w':
                         if not self.lines[self.y].copy():
-                            self.alert('No text is selected')
+                            self.alert(_('No text is selected'))
                     elif d.lower() == 'y':
                         if not self.lines[self.y].yank_cycle():
                             stored = ctrl('Y')
