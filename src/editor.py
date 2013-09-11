@@ -63,7 +63,11 @@ class Jump():
         print(self.string, end = '')
 
 
-## TODO additional key combinations  C-<left>/M-b=prev-word  C-<right>/M-a=next-word  C-<up>=page-up  C-<down>=page-down
+## TODO  additional key combinations  C-<left>/M-b=prev-word  C-<right>/M-a=next-word  C-<up>=page-up  C-<down>=page-down
+## TODO  colours should be configurable with rc file
+## TODO  ring limits should be configurable with rc file
+## TODO  gettext (or similar) should be usd for localisation
+## TODO  widthless characters should be ignored when calculating the size a text
 class TextArea():
     '''
     GNU Emacs alike text area
@@ -455,7 +459,6 @@ class TextArea():
         @param  preredrawer:()?→void   Method to call before redrawing screen
         @param  postredrawer:()?→void  Method to call after redaring screen
         '''
-        
         modified = False
         override = False
         
