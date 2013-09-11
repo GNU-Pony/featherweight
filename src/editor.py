@@ -97,6 +97,25 @@ class TextArea():
     
     
     
+    def initialise(self):
+        '''
+        Initialise terminal and TTY settings
+        '''
+        print('\033[H\033[2J')
+        self.old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
+        self.old_stty = self.old_stty.decode('utf-8', 'error')[:-1]
+        Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
+    
+    def close(self):
+        '''
+        Restore the terminal to the state before `initialise` as invoked
+        '''
+        print('\033[H\033[2J', end = '')
+        sys.stdout.flush()
+        Popen(['stty', self.old_stty], stdout = PIPE).communicate()
+    
+    
+    
     def get_selection(self, for_display = False):
         '''
         Get the selected texts start and end on the X-axis
@@ -651,14 +670,12 @@ class TextArea():
 
 def phonysaver():
     return True
-print('\033[H\033[2J')
-old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
-old_stty = old_stty.decode('utf-8', 'error')[:-1]
-Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
+area = None
 try:
-    TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 6, 4, 40, 10).run(phonysaver)
+    area = TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 6, 4, 40, 10)
+    area.initialise()
+    area.run(phonysaver)
 finally:
-    print('\033[H\033[2J', end = '')
-    sys.stdout.flush()
-    Popen(['stty', old_stty], stdout = PIPE).communicate()
+    if area is not None:
+        area.close()
 
