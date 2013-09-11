@@ -528,7 +528,24 @@ class TextArea():
                 if self.editring.is_empty():
                     self.alert('Nothing to undo')
                 else:
-                    pass # TODO undo/redo
+                    (edit, undo) = self.editring.pop()
+                    self.alert('Undo!' if undo else 'Redo!')
+                    fix_offx = not (self.offx <= edit.x < self.offx + self.areawidth)
+                    text = self.lines[edit.y]
+                    if edit.deleted is not None:
+                        a, b = max(edit.old_x, edit.new_x), min(edit.old_x, edit.new_x)
+                        text = text[:a] + text[b:]
+                    if edit.inserted is not None:
+                        text = text[:edit.old_x] + edit.inserted + text[edit.old_x:]
+                    self.lines[edit.x] = text
+                    self.x = edit.new_x
+                    if self.y != edit.y:
+                        self.mark = None
+                        fix_offx = True
+                        self.y = edit.y
+                    if fix_offx:
+                        self.offx = max(edit.x - self.areawidth + 1, 0)
+                        self.lines[self.y].draw()
             elif d == ctrl('X'):
                 self.alert('C-x')
                 sys.stdout.flush()
