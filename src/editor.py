@@ -63,7 +63,7 @@ class Jump():
         print(self.string, end = '')
 
 
-
+## TODO additional key combinations  C-<left>/M-b=prev-word  C-<right>/M-a=next-word  C-<up>=page-up  C-<down>=page-down
 class TextArea():
     '''
     GNU Emacs alike text area
