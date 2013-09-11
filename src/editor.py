@@ -333,7 +333,8 @@ class TextArea():
             '''
             Move the the point
             
-            @return  :delta  The number of steps to move the point to the right
+            @param   delta:int  The number of steps to move the point to the right
+            @return  :bool      Whether the point has been moved
             '''
             x = self.area.x + delta
             if 0 <= x <= len(self.text):
