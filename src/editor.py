@@ -80,8 +80,8 @@ class TextArea():
         @param  fields:list<str>        Field names
         @param  datamap:dist<str, str>  Data map
         @param  left:int                Left position of the component, 1 based
-        @param  top:int                 Top position of the component, 1 based
-        @param  width:int?              Width of the component, `None` for screen width − left offset, negative for `None` plus that value
+        @param  top:int                 Top  position of the component, 1 based
+        @param  width:int?              Width of the component,  `None` for screen width − left offset, negative for `None` plus that value
         @param  height:int?             Height of the component, `None` for screen height − top offset, negative for `None` plus that value
         '''
         if width  is None: width  = 0
@@ -418,7 +418,7 @@ class TextArea():
         x = self.left + self.innerleft + self.x - self.offx
         dashes = max(self.width - len(txt), 0)
         Jump(self.top + self.height - 2, self.left)()
-        print('\033[7m%s-\033[27m%s' % (self.limit_text(txt + '-' * dashes), Jump(y, x)), end='')
+        print('\033[07m%s-\033[27m%s' % (self.limit_text(txt + '-' * dashes), Jump(y, x)), end='')
         self.last_status = text
     
     def alert(self, text):
@@ -457,7 +457,7 @@ class TextArea():
         
         @param  saver:()→bool          Save method
         @param  preredrawer:()?→void   Method to call before redrawing screen
-        @param  postredrawer:()?→void  Method to call after redrawing screen
+        @param  postredrawer:()?→void  Method to call after  redrawing screen
         '''
         modified = False
         override = False
