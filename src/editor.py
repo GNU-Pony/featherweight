@@ -421,7 +421,7 @@ class TextArea():
         '''
         Execute text reading
         
-        @param  saver:()→void          Save method
+        @param  saver:()→bool          Save method
         @param  preredrawer:()?→void   Method to call before redrawing screen
         @param  postredrawer:()?→void  Method to call after redaring screen
         '''
@@ -572,10 +572,12 @@ class TextArea():
                     last = ''
                     for row in range(0, len(self.lines)):
                         self.datamap[self.lines[row].name] = self.lines[row].text
-                    saver()
-                    modified = False
-                    update_status()
-                    self.alert('Saved')
+                    if saver():
+                        modified = False
+                        update_status()
+                        self.alert('Saved')
+                    else:
+                        self.alert('Failed to save!')
                 elif d == ctrl('C'):
                     break
                 else:
@@ -642,7 +644,7 @@ class TextArea():
 
 
 def phonysaver():
-    pass
+    return True
 print('\033[H\033[2J')
 old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'error')[:-1]
