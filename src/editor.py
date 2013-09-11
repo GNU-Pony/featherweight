@@ -22,6 +22,7 @@ import sys
 from subprocess import Popen, PIPE
 
 from killring import *
+from editring import *
 
 
 
@@ -432,6 +433,15 @@ class TextArea():
         stored = ctrl('L')
         edited = False
         
+        def redraw():
+            print('\033[H\033[2J', end='')
+            preredrawer()
+            for line in self.lines:
+                line.draw()
+            postredrawer()
+            self.realert()
+            self.restatus()
+        
         def store(key, value_map, required_next = None):
             nonlocal stored
             if key in value_map:
@@ -463,12 +473,12 @@ class TextArea():
         
         def ensure_y():
             nonlocal stored
-            if self.y - self.offy < 0:
-                self.offy -= 1
-            if self.y - self.offy >= self.height - 2:
-                self.offy += 1
+            if self.y < self.offy:
+                self.offy = self.y
+            if self.y - self.offy > self.height - 3:
+                self.offy = self.y - self.height + 3
             update_status()
-            stored = ctrl('L')
+            redraw()
         
         update_status()
         while True:
@@ -496,7 +506,7 @@ class TextArea():
                     self.offy = max(0, self.offy)
                     self.y = self.offy
                     update_status()
-                    stored = ctrl('L')
+                    redraw()
                     self.mark, self.x, self.offx = None, 0, 0
                 else:
                     self.y = self.offy
@@ -509,7 +519,7 @@ class TextArea():
                     self.y = min(self.y, len(self.lines) - 1)
                     self.offy = max(0, self.y - self.height + 3)
                     update_status()
-                    stored = ctrl('L')
+                    redraw()
                     self.mark, self.x, self.offx = None, 0, 0
                 else:
                     self.y = self.offy + self.height - 3
@@ -546,6 +556,8 @@ class TextArea():
                     if fix_offx:
                         self.offx = max(edit.x - self.areawidth + 1, 0)
                         self.lines[self.y].draw()
+                    if not (self.offy <= edit.y < self.offy + self.height - 2):
+                        ensure_y()
             elif d == ctrl('X'):
                 self.alert('C-x')
                 sys.stdout.flush()
@@ -589,14 +601,7 @@ class TextArea():
                 elif d == ctrl('E'):  move_point(len(self.lines[self.y].text) - self.x, 'At end')
                 elif d == ctrl('B'):  move_point(-1, 'At beginning')
                 elif d == ctrl('A'):  move_point(-(self.x), 'At beginning')
-                elif d == ctrl('L'):
-                    print('\033[H\033[2J', end='')
-                    preredrawer()
-                    for line in self.lines:
-                        line.draw()
-                    postredrawer()
-                    self.realert()
-                    self.restatus()
+                elif d == ctrl('L'):  redraw()
                 elif d == '\033':
                     d = sys.stdin.read(1)
                     if d == '[':
