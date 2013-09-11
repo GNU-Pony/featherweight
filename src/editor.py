@@ -673,14 +673,15 @@ class TextArea():
                 edited = True
 
 
-def phonysaver():
-    return True
-area = None
-try:
-    area = TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 6, 4, 40, 10)
-    area.initialise(True)
-    area.run(phonysaver)
-finally:
-    if area is not None:
-        area.close()
+if __name__ == '__main__': # For testing
+    def phonysaver():
+        return True
+    area = None
+    try:
+        area = TextArea(('a be se de e eff ge hå i ji kå ell emm enn o pe ku ärr ess te u ve dubbel-ve eks y säta å ä ö').split(' '), {}, 6, 4, 40, 10)
+        area.initialise(True)
+        area.run(phonysaver)
+    finally:
+        if area is not None:
+            area.close()
 
