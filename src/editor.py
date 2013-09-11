@@ -457,7 +457,7 @@ class TextArea():
         
         @param  saver:()→bool          Save method
         @param  preredrawer:()?→void   Method to call before redrawing screen
-        @param  postredrawer:()?→void  Method to call after redaring screen
+        @param  postredrawer:()?→void  Method to call after redrawing screen
         '''
         modified = False
         override = False
