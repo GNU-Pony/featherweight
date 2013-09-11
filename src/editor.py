@@ -31,6 +31,32 @@ from editring import *
 
 
 
+INACTIVE_COLOUR = '34'
+'''
+:str?  The colour of an inactive line
+'''
+
+ACTIVE_COLOUR = '01;34'
+'''
+:str?  The colour of an active line
+'''
+
+SELECTED_COLOUR = '44;37'
+'''
+:str?  The colour of a selected text
+'''
+
+STATUS_COLOUR = '07'
+'''
+:str?  The colour of the status bar
+'''
+
+ALERT_COLOUR = None
+'''
+:str?  The colour of the alert message
+'''
+
+
 atleast = lambda x, minimum : (x is not None) and (x >= minimum)
 '''
 Test that a value is defined and of at least a minimum value
@@ -196,12 +222,17 @@ class TextArea():
             Redraw the line
             '''
             if 0 <= self.y - self.area.offy < self.area.height - 2:
-                leftside = '%s\033[%s34m%s:\033[00m' % (self.jump(-(self.area.innerleft)), '01;' if self.is_active() else '', self.name)
+                leftside = ACTIVE_COLOUR if self.is_active() else INACTIVE_COLOUR
+                if leftside is not None:
+                    leftside = '%s\033[%sm%s:\033[00m' % (self.jump(-(self.area.innerleft)), leftside, self.name)
+                else:
+                    leftside = '%s%s:' % (self.jump(-(self.area.innerleft)), self.name)
                 text = (self.text[self.area.offx if self.is_active() else 0:] + ' ' * self.area.areawidth)[:self.area.areawidth]
                 if self.is_active() and atleast(self.area.mark, 0):
                     (a, b) = self.area.get_selection(True)
                     if a != b:
-                        text = text[:a] + ('\033[44;37m%s\033[00m' % text[a : b]) + text[b:]
+                        if SELECTED_COLOUR is not None:
+                            text = text[:a] + ('\033[%sm%s\033[00m' % (SELECTED_COLOUR, text[a : b])) + text[b:]
                 print('%s%s%s' % (leftside, self.jump(0), text), end='')
                 if self.is_active():
                     self.jump(self.area.x - self.area.offx)()
@@ -432,7 +463,10 @@ class TextArea():
         x = self.left + self.innerleft + self.x - self.offx
         dashes = max(self.width - len(txt), 0)
         Jump(self.top + self.height - 2, self.left)()
-        print('\033[07m%s-\033[27m%s' % (self.limit_text(txt + '-' * dashes), Jump(y, x)), end='')
+        if STATUS_COLOUR is not None:
+            print('\033[%sm%s-\033[00m%s' % (STATUS_COLOUR, self.limit_text(txt + '-' * dashes), Jump(y, x)), end='')
+        else:
+            print('%s-%s' % (self.limit_text(txt + '-' * dashes), Jump(y, x)), end='')
         self.last_status = text
     
     def alert(self, text):
@@ -448,7 +482,10 @@ class TextArea():
             y = self.top + self.y - self.offy
             x = self.left + self.innerleft + self.x - self.offx
             Jump(self.top + self.height - 1, self.left)()
-            print('\033[2K%s%s' % (self.limit_text(text), Jump(y, x)), end='')
+            if ALERT_COLOUR is not None:
+                print('\033[2K\033[%sm%s\033[00m%s' % (ALERT_COLOUR, self.limit_text(text), Jump(y, x)), end='')
+            else:
+                print('\033[2K%s%s' % (self.limit_text(text), Jump(y, x)), end='')
             self.alerted = True
         self.last_alert = text
     
