@@ -72,6 +72,14 @@ class Jump():
 ## TODO  colours should be configurable with rc file
 ## TODO  ring limits should be configurable with rc file
 ## TODO  widthless characters should be ignored when calculating the size a text
+
+## TODO  implement undo history
+## 
+##    Until the user has halted for 1 second (configurably) or has navigated using arrow keys or alternative key combinations,
+##    edits should be accumulated and then stored in the editring. The edits is stored when the next keystroke is made, there
+##    should not be a timer waits for the user to idle.
+## 
+
 class TextArea():
     '''
     GNU Emacs alike text area
