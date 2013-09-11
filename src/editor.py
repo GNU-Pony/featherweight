@@ -69,17 +69,23 @@ class TextArea():
     GNU Emacs alike text area
     '''
     
-    def __init__(self, fields, datamap, left, top, width, height):
+    def __init__(self, fields, datamap, left = 1, top = 1, width = None, height = None):
         '''
         Constructor
         
         @param  fields:list<str>        Field names
         @param  datamap:dist<str, str>  Data map
-        @param  left:int                Left position of the component
-        @param  top:int                 Top position of the component
-        @param  width:int               Width of the component
-        @param  height:int              Height of the component
+        @param  left:int                Left position of the component, 1 based
+        @param  top:int                 Top position of the component, 1 based
+        @param  width:int?              Width of the component, `None` for screen width − left offset, negative for `None` plus that value
+        @param  height:int?             Height of the component, `None` for screen height − top offset, negative for `None` plus that value
         '''
+        if width  is None: width  = 0
+        if height is None: height = 0
+        if (width <= 0) or (height <= 0):
+            screen_size = Popen('stty size'.split(' '), stdout = PIPE).communicate()[0].decode('utf-8', 'error')[:-1].split(' ')
+            if width <= 0:   width  += int(screen_size[1]) - left + 1
+            if height <= 0:  height += int(screen_size[0]) - top  + 1
         self.fields, self.datamap, self.left, self.top, self.width, self.height = fields, datamap, left, top, width - 1, height
         self.innerleft = len(max(self.fields, key = len)) + 3
         self.killring, self.editring = Killring(), Editring()
