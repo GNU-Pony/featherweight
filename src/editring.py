@@ -110,3 +110,4 @@ class Editring():
         edit = self.editring[self.editptr]
         self.editptr += self.editdir
         return (edit, True) if self.editdir < 0 else (edit.reverse(), False)
+
