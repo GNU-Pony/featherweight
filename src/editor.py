@@ -69,6 +69,7 @@ class Jump():
 
 
 ## TODO  additional key combinations  C-<left>/M-b=prev-word  C-<right>/M-a=next-word  C-<up>=page-up  C-<down>=page-down
+##                                    S-<left>=set-mark+left  S-<right>=set-mark+right
 ## TODO  colours should be configurable with rc file
 ## TODO  ring limits should be configurable with rc file
 ## TODO  widthless characters should be ignored when calculating the size a text
