@@ -35,7 +35,7 @@ limit = lambda x_min, x, x_max : min(max(x_min, x), x_max)
 Limit a value to a closed set
 '''
 
-ctrl = lambda key : chr(ord(key) - ord('@'))
+ctrl = lambda key : chr(ord(key) ^ ord('@'))
 '''
 Return the symbol for a specific letter pressed in combination with Ctrl
 '''
@@ -81,7 +81,7 @@ class TextArea():
         '''
         self.fields, self.datamap, self.left, self.top, self.width, self.height = fields, datamap, left, top, width - 1, height
         self.innerleft = len(max(self.fields, key = len)) + 3
-        self.killring = Killring()
+        self.killring, self.editring = Killring(), Editring()
         data = lambda field : datamap[field] if field in datamap else ''
         self.lines = [TextArea.Line(self, self.fields[y], data(self.fields[y]), y) for y in range(len(self.fields))]
         self.areawidth = self.width - self.innerleft
@@ -523,6 +523,12 @@ class TextArea():
             elif d == ctrl('K'):  edit(lambda L : L.kill(),  'At end')
             elif d == ctrl('W'):  edit(lambda L : L.cut(),   'No text is selected')
             elif d == ctrl('Y'):  edit(lambda L : L.yank(),  'Killring is empty')
+            elif d == ctrl('R'):  self.editring.change_direction()
+            elif d in (ctrl('_'), ctrl('U')):
+                if self.editring.is_empty():
+                    self.alert('Nothing to undo')
+                else:
+                    pass # TODO undo/redo
             elif d == ctrl('X'):
                 self.alert('C-x')
                 sys.stdout.flush()
