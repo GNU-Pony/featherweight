@@ -94,8 +94,6 @@ class Jump():
         print(self.string, end = '')
 
 
-## TODO  additional key combinations  C-<left>=prev-word      C-<right>=next-word       C-<up>=page-up  C-<down>=page-down
-##                                    S-<left>=set-mark+left  S-<right>=set-mark+right
 ## TODO  colours should be configurable with rc file
 ## TODO  ring limits should be configurable with rc file
 ## TODO  widthless characters should be ignored when calculating the size a text
@@ -566,6 +564,9 @@ class TextArea():
             update_status()
             redraw()
         
+        def letter_type(char):
+            return char == ' '
+        
         update_status()
         while True:
             if atleast(oldmark, 0) or atleast(self.mark, 0):
@@ -610,8 +611,24 @@ class TextArea():
                 else:
                     self.y = self.offy + self.height - 3
                     self.mark, self.x, self.offx = None, 0, 0
-            elif d == -3: pass # TODO prev word
-            elif d == -4: pass # TODO next word
+            elif d == -3:
+                if self.x == 0:  self.alert(_('At beginning'))
+                else:
+                    x = self.x
+                    text = self.lines[self.y].text
+                    t = letter_type(text[x - 1])
+                    while (x > 0) and (letter_type(text[x - 1]) == t):
+                        x -= 1
+                    self.lines[self.y].move_point(x - self.x)
+            elif d == -4:
+                if self.x == len(self.lines[self.y].text):  self.alert(_('At end'))
+                else:
+                    x = self.x
+                    text = self.lines[self.y].text
+                    t = letter_type(text[x])
+                    while (x < len(text)) and (letter_type(text[x]) == t):
+                        x += 1
+                    self.lines[self.y].move_point(x - self.x)
             elif d == ctrl('@'):
                 if   self.mark is None:       self.mark = self.x    ; self.alert(_('Mark set'))
                 elif self.mark == ~(self.x):  self.mark = self.x    ; self.alert(_('Mark activated'))
