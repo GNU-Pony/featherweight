@@ -94,7 +94,7 @@ class Jump():
         print(self.string, end = '')
 
 
-## TODO  additional key combinations  C-<left>/M-b=prev-word  C-<right>/M-a=next-word  C-<up>=page-up  C-<down>=page-down
+## TODO  additional key combinations  C-<left>=prev-word      C-<right>=next-word       C-<up>=page-up  C-<down>=page-down
 ##                                    S-<left>=set-mark+left  S-<right>=set-mark+right
 ## TODO  colours should be configurable with rc file
 ## TODO  ring limits should be configurable with rc file
@@ -610,6 +610,8 @@ class TextArea():
                 else:
                     self.y = self.offy + self.height - 3
                     self.mark, self.x, self.offx = None, 0, 0
+            elif d == -3: pass # TODO prev word
+            elif d == -4: pass # TODO next word
             elif d == ctrl('@'):
                 if   self.mark is None:       self.mark = self.x    ; self.alert(_('Mark set'))
                 elif self.mark == ~(self.x):  self.mark = self.x    ; self.alert(_('Mark activated'))
@@ -695,7 +697,22 @@ class TextArea():
                     if d == '[':
                         d = sys.stdin.read(1)
                         if store(d, {'C':ctrl('F'), 'D':ctrl('B'), 'A':ctrl('P'), 'B':ctrl('N')}): pass
-                        elif store(d, {'3':ctrl('D'), '1':ctrl('A'), '4':ctrl('E'), '5':-1, '6':-2}, '~'): pass
+                        elif store(d, {'3':ctrl('D'), '4':ctrl('E'), '5':-1, '6':-2}, '~'): pass
+                        elif d == '1':
+                            d = sys.stdin.read(1)
+                            if d == '~':  stored = ctrl('A')
+                            elif d == ';':
+                                d = sys.stdin.read(1)
+                                if d == '5':    store(sys.stdin.read(1), {'C':-4, 'D':-3, 'A':-1, 'B':-2}) # ctrl
+                                elif d == '2': # shift
+                                    store(sys.stdin.read(1), {'C':ctrl('F'), 'D':ctrl('B')})
+                                    if stored is not None:
+                                        if not atleast(self.mark, 0):
+                                            self.alert(_('Mark set'))
+                                            self.mark = self.x
+                                        if stored == ctrl('F'):  move_point(1, _('At end'))
+                                        else:                    move_point(-1, _('At beginning'))
+                                        stored = None
                         elif d == '2':
                             if sys.stdin.read(1) == '~':
                                 override = not override
@@ -707,7 +724,7 @@ class TextArea():
                                 if d == '~': break
                     elif d == 'O':
                         store(sys.stdin.read(1), {'H':ctrl('A'), 'F':ctrl('E')})
-                    elif store(d, {'P':-1, 'p':-1, 'N':-2, 'n':-2}): pass
+                    elif store(d, {'P':-1, 'p':-1, 'N':-2, 'n':-2, 'B':-3, 'b':-3, 'F':-4, 'f':-4}): pass
                     elif d.lower() == 'w':
                         if not self.lines[self.y].copy():
                             self.alert(_('No text is selected'))
