@@ -19,6 +19,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 import sys
+import string
 from subprocess import Popen, PIPE
 
 import gettext
@@ -564,8 +565,8 @@ class TextArea():
             update_status()
             redraw()
         
-        def letter_type(char):
-            return char == ' '
+        def letter_type(char): ## XXX how do we do this with unicode support
+            return (char in string.whitespace) or (char in string.punctuation)
         
         update_status()
         while True:
