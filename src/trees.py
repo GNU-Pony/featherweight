@@ -117,7 +117,7 @@ class Tree():
             if self.curline > self.lineoff:
                 print()
             if force or ('draw_line' not in feed) or (feed['draw_line'] != self.draw_line):
-                print('' if force else '\033[2K', end = prefix + title)
+                print('\033[2K', end = prefix + title)
                 feed['draw_line'] = self.draw_line
             self.draw_line += 1
         self.curline += 1
