@@ -22,16 +22,34 @@ import fcntl
 
 
 def touch(file):
+    '''
+    Touch a lock file and return it opened
+    
+    @param   file:str  The file name of the lock
+    @return  :ofile    The file handle
+    '''
     file = open(file, 'a')
     file.flush()
     return file
 
 
 def flock(file, exclusive, nonblocking = False):
+    '''
+    Apply file lock on a file
+    
+    @param  file:file         The file handle
+    @param  exclusive:bool    Whether to use an exclusive lock, otherwise shared lock
+    @param  nonblocking:bool  Whether to fail if an conflicting lock is already applied by a another process
+    '''
     locktype = (LOCK_fcntl.EX if exclusive else fcntl.LOCK_SH) | (fcntl.LOCK_NB if nonblocking else 0)
     fcntl.fcntl(file.fileno(), locktype)
 
 
 def unflock(file):
+    '''
+    Release file lock from a file
+    
+    @param  file:file  The file handle
+    '''
     fcntl.fcntl(file.fileno(), fcntl.LOCK_UN)
 
