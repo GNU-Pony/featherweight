@@ -92,6 +92,19 @@ try:
                 pass
         elif action == 'open':
             pass
+        elif action == 'add':
+            pass
+        elif action == 'delete':
+            if node is not None:
+                pass
+        elif action == 'read':
+            if node is not None:
+                pass
+        elif action == 'unread':
+            if node is not None:
+                pass
+        elif action == 'back':
+            pass
 
 except Exception as err:
     raise err
