@@ -446,6 +446,12 @@ class TextArea():
     
     
     def limit_text(self, text):
+        '''
+        Limit a text to fit the width of the screen
+        
+        @param   text:str  The text
+        @return  :str      The text truncated
+        '''
         max_len = self.width
         if len(text) > max_len:
             text = text[:max_len - 1] + '…'
