@@ -24,7 +24,17 @@ from subprocess import Popen, PIPE
 
 
 class Tree():
+    '''
+    Feed tree class
+    '''
+    
     def __init__(self, root, feeds):
+        '''
+        Constructor
+        
+        @param  root:str                        The title of the root
+        @param  feeds:itr<dict<str, _|itr<↑>>>  Feeds
+        '''
         global count, height, width
         
         self.root = root
@@ -49,6 +59,12 @@ class Tree():
     
     
     def count_new(self, feeds):
+        '''
+        Recursively count the number of new entries
+        
+        @param   feeds:itr<dict<str, _|int|itr<↑>>>  The nodes to perform the count over
+        @return  :int                                The number of new entries in the node and all its children
+        '''
         rc = 0
         for feed in feeds:
             count = 0
@@ -62,10 +78,24 @@ class Tree():
     
     
     def is_expanded(self, feed):
+        '''
+        Check whether a feed is expanded
+        
+        @param   feed:dict<str, _|bool>  The feed
+        @return  :bool                   Whether the feed is expanded
+        '''
         return ('expanded' not in feed) or feed['expanded']
     
     
     def print_node(self, feed, last, indent, force):
+        '''
+        Print a node and its children
+        
+        @param   feed:dict<str, _|itr<↑>|str|int>  The node to print
+        @param   last:bool                         Whether the node is the last child in its parent
+        @param   indent:str                        The indent string for the parent
+        @param   force:bool                        Whether to print even if marked as printed
+        '''
         global height, width
         title = feed['title']
         prefix = indent + ('└' if last else '├')
@@ -107,6 +137,9 @@ class Tree():
     
     
     def print_tree(self):
+        '''
+        Print the entire tree
+        '''
         global height, width, count
         self.line = 0
         self.curline = 0
