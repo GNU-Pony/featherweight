@@ -191,6 +191,11 @@ class Tree():
     
     
     def interact(self):
+        '''
+        Start interaction with the tree
+        
+        @return  (command, feed):(str, dict<str, _>)  The choosen command and feed
+        '''
         global height, width
         self.print_tree()
         
