@@ -150,17 +150,20 @@ try:
             if (node is None) or ('url' not in node) or (node['url'] is None) or (node['url'] == ''):
                 table = {'Title' : '', 'URL' : ''}
                 values = {'id' : str(uuid.uuid4())}
+                saved = False
                 def saver():
-                    global table, values
+                    global table, values, saved
                     values['title'] = table['Title']
                     values['url'] = None if table['URL'] == '' else table['URL']
+                    saved = True
                 text_area = TextArea(['Title', 'URL'], table)
                 text_area.initialise(False)
                 text_area.run(saver)
                 text_area.close()
                 gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
                 gettext.textdomain('@PKGNAME@')
-                update_feeds(lambda t : insert_node(t, node['id'], values))
+                if saved:
+                    update_feeds(lambda t : insert_node(t, node['id'], values))
                 print('\033[H\033[2J', end = '', flush = True)
                 tree.draw_force = True
         elif action == 'delete':
