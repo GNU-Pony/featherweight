@@ -37,7 +37,29 @@ def remove_node(trees, node_id):
             trees.remove(i)
             return True
         if 'inner' in trees[i]:
-            if remove_nodes(trees[i][inner], node_id):
+            if remove_node(trees[i]['inner'], node_id):
+                return True
+    return False
+
+
+
+def insert_node(trees, node_id, node):
+    '''
+    Insert a new node into the tree
+    
+    @param   trees:itr<dict<str, _|itr<↑>|¿I?>>  The trees
+    @param   node_id:¿I?                         The identifier for the new node's parent
+    @param   node:dict<str, _>                   The new node
+    @return  :bool                               Whether the node was found; intended for method internal use
+    '''
+    if node_id is None:
+        trees.append(node)
+        return True
+    for i in range(len(trees)):
+        if ('id' in trees[i]) and (trees[i]['id'] == node_id):
+            return insert_node(trees[i]['inner'], None, node)
+        if 'inner' in trees[i]:
+            if insert_node(trees[i]['inner'], node_id, node):
                 return True
     return False
 

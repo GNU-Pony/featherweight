@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 import os
 import sys
+import uuid
 from subprocess import Popen, PIPE
 
 import gettext
@@ -30,6 +31,7 @@ _ = gettext.gettext
 from flocker import *
 from trees import *
 from updater import *
+from editor import *
 
 
 old_stty = Popen('stty --save'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
@@ -43,7 +45,14 @@ update = '--update' in args
 system = '--system' in args
 
 
+islinux = ('TERM' in os.environ) and (os.environ['TERM'] == 'linux')
 home = os.environ['HOME']
+
+quote = (lambda x : "'%s'" % x) if islinux else (lambda x : '‘%s’' % x)
+double_quote = (lambda x : '"%s"' % x) if islinux else (lambda x : '“%s”' % x)
+abbr = lambda x : ('~%s' % x[len(home):] if x.startswith(home + '/') else x)
+
+
 root = '%s/.featherweight' % home
 if not os.path.exists(root):
     os.makedirs(root)
@@ -86,7 +95,42 @@ if system:
 
 print('\033[?1049h\033[?25l\033[?9h', end = '', flush = True)
 
+
 terminated = False
+
+def update_feeds(function):
+    global terminated
+    with touch('%s/feeds' % root) as feeds_flock:
+        try:
+            flock(feeds_flock, True, True)
+        except:
+            print(_('Feed database is locked by another process, waiting...'))
+            flock(feeds_flock, True)
+        function(feeds)
+        Tree.count_new(feeds)
+        _feeds = None
+        with open('%s/feeds' % root, 'rb') as file:
+            _feeds = file.read().decode('utf-8', 'error')
+            with open('%s/feeds.bak' % root, 'wb') as bakfile:
+                bakfile.write(str(_feeds).encode('utf-8'))
+        if len(_feeds) == 0:
+            _feeds = '[]'
+        _feeds = eval(_feeds)
+        function(_feeds)
+        Tree.count_new(_feeds)
+        _feeds = str(_feeds)
+        try:
+            with open('%s/feeds' % root, 'wb') as file:
+                file.write(_feeds.encode('utf-8'))
+        except Exception as err:
+            Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
+            print('\n\033[?9l\033[?25h\033[?1049l', end = '', flush = True)
+            print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % ('%s/feeds' % abbr(root), '%s/feeds' % abbr(root)))
+            terminated = True
+            raise err
+        unflock(feeds_flock)
+
+
 try:
     tree = Tree('My Feeds', feeds)
     while True:
@@ -103,48 +147,33 @@ try:
             sys.stdin.read(1)
             pass
         elif action == 'add':
-            print(node)
-            sys.stdin.read(1)
-            pass
+            if (node is None) or ('url' not in node) or (node['url'] is None) or (node['url'] == ''):
+                table = {'Title' : '', 'URL' : ''}
+                values = {'id' : str(uuid.uuid4())}
+                def saver():
+                    global table, values
+                    values['title'] = table['Title']
+                    values['url'] = None if table['URL'] == '' else table['URL']
+                text_area = TextArea(['Title', 'URL'], table)
+                text_area.initialise(False)
+                text_area.run(saver)
+                text_area.close()
+                gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
+                gettext.textdomain('@PKGNAME@')
+                update_feeds(lambda t : insert_node(t, node['id'], values))
+                print('\033[H\033[2J', end = '', flush = True)
+                tree.draw_force = True
         elif action == 'delete':
             if node is not None:
                 Popen(['stty', 'echo', 'icanon'], stdout = PIPE, stderr = PIPE).communicate()
-                print('\033[H\033[2J\033[?25h\033[?9l%s' % (_('Are you sure you to delete “%s”?') % node['title']))
-                print(_('Type ‘%s’, if you are sure.') % _('yes'))
+                print('\033[H\033[2J\033[?25h\033[?9l%s' % (_('Are you sure you to delete %s?') % double_quote(node['title'])))
+                print(_('Type %s, if you are sure.') % quote(_('yes')))
                 delete = sys.stdin.readline().replace('\n', '') == _('yes')
                 Popen(['stty', '-echo', '-icanon'], stdout = PIPE, stderr = PIPE).communicate()
                 print('\033[?25l\033[?9h', end = '', flush = True)
                 if delete:
-                    with touch('%s/feeds' % root) as feeds_flock:
-                        try:
-                            flock(feeds_flock, True, True)
-                        except:
-                            print(_('Feed database is locked by another process, waiting...'))
-                            flock(feeds_flock, True)
-                        node = node['id']
-                        remove_node(feeds, node)
-                        Tree.count_new(feeds)
-                        _feeds = None
-                        with open('%s/feeds' % root, 'rb') as file:
-                            _feeds = file.read().decode('utf-8', 'error')
-                            with open('%s/feeds.bak' % root, 'wb') as bakfile:
-                                bakfile.write(str(_feeds).encode('utf-8'))
-                        if len(_feeds) == 0:
-                            _feeds = '[]'
-                        _feeds = eval(_feeds)
-                        remove_node(_feeds, node)
-                        Tree.count_new(_feeds)
-                        _feeds = str(_feeds)
-                        try:
-                            with open('%s/feeds' % root, 'wb') as file:
-                                file.write(_feeds.encode('utf-8'))
-                        except Exception as err:
-                            Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
-                            print('\n\033[?9l\033[?25h\033[?1049l', end = '', flush = True)
-                            print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % ('%s/feeds' % root, '%s/feeds' % root))
-                            terminated = True
-                            raise err
-                        unflock(feeds_flock)
+                    node = node['id']
+                    update_feeds(lambda t : remove_node(t, node))
                     tree.select_stack.pop()
                 print('\033[H\033[2J', end = '', flush = True)
                 tree.draw_force = True
