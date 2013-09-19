@@ -22,6 +22,11 @@ import os
 import sys
 from subprocess import Popen, PIPE
 
+import gettext
+gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
+gettext.textdomain('@PKGNAME@')
+_ = gettext.gettext
+
 from flocker import *
 from trees import *
 from updater import *
@@ -79,8 +84,9 @@ with touch('%s/feeds' % root) as feeds_flock:
 if system:
     sys.exit(0)
 
-print('\033[?1049h\033[?25l\033[?9h', end = '')
+print('\033[?1049h\033[?25l\033[?9h', end = '', flush = True)
 
+terminated = False
 try:
     tree = Tree('My Feeds', feeds)
     while True:
@@ -89,27 +95,73 @@ try:
             break
         elif action == 'edit':
             if node is not None:
+                print(node)
+                sys.stdin.read(1)
                 pass
         elif action == 'open':
+            print(node)
+            sys.stdin.read(1)
             pass
         elif action == 'add':
+            print(node)
+            sys.stdin.read(1)
             pass
         elif action == 'delete':
             if node is not None:
-                pass
+                Popen(['stty', 'echo', 'icanon'], stdout = PIPE, stderr = PIPE).communicate()
+                print('\033[H\033[2J\033[?25h\033[?9l%s' % (_('Are you sure you to delete “%s”?') % node['title']))
+                print(_('Type ‘%s’, if you are sure.') % _('yes'))
+                delete = sys.stdin.readline().replace('\n', '') == _('yes')
+                Popen(['stty', '-echo', '-icanon'], stdout = PIPE, stderr = PIPE).communicate()
+                print('\033[?25l\033[?9h', end = '', flush = True)
+                if delete:
+                    with touch('%s/feeds' % root) as feeds_flock:
+                        try:
+                            flock(feeds_flock, True, True)
+                        except:
+                            print(_('Feed database is locked by another process, waiting...'))
+                            flock(feeds_flock, True)
+                        node = node['id']
+                        remove_node(feeds, node)
+                        Tree.count_new(feeds)
+                        _feeds = None
+                        with open('%s/feeds' % root, 'rb') as file:
+                            _feeds = file.read().decode('utf-8', 'error')
+                            with open('%s/feeds.bak' % root, 'wb') as bakfile:
+                                bakfile.write(str(_feeds).encode('utf-8'))
+                        if len(_feeds) == 0:
+                            _feeds = '[]'
+                        _feeds = eval(_feeds)
+                        remove_node(_feeds, node)
+                        Tree.count_new(_feeds)
+                        _feeds = str(_feeds)
+                        try:
+                            with open('%s/feeds' % root, 'wb') as file:
+                                file.write(_feeds.encode('utf-8'))
+                        except Exception as err:
+                            Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
+                            print('\n\033[?9l\033[?25h\033[?1049l', end = '', flush = True)
+                            print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % ('%s/feeds' % root, '%s/feeds' % root))
+                            terminated = True
+                            raise err
+                        unflock(feeds_flock)
+                    tree.select_stack.pop()
+                print('\033[H\033[2J', end = '', flush = True)
+                tree.draw_force = True
         elif action == 'read':
             if node is not None:
-                pass
+                pass # we do not have entires, just feeds, nothing to read
         elif action == 'unread':
             if node is not None:
-                pass
+                pass # we do not have entires, just feeds, nothing to unread
         elif action == 'back':
-            pass
+            pass # we are at the first page
 
 except Exception as err:
     raise err
     pass
 finally:
-    Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
-    print('\n\033[?9l\033[?25h\033[?1049l', end = '')
+    if not terminated:
+        Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
+        print('\n\033[?9l\033[?25h\033[?1049l', end = '', flush = True)
 

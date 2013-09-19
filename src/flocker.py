@@ -41,7 +41,7 @@ def flock(file, exclusive, nonblocking = False):
     @param  exclusive:bool    Whether to use an exclusive lock, otherwise shared lock
     @param  nonblocking:bool  Whether to fail if an conflicting lock is already applied by a another process
     '''
-    locktype = (LOCK_fcntl.EX if exclusive else fcntl.LOCK_SH) | (fcntl.LOCK_NB if nonblocking else 0)
+    locktype = (fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH) | (fcntl.LOCK_NB if nonblocking else 0)
     fcntl.fcntl(file.fileno(), locktype)
 
 

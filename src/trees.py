@@ -23,6 +23,26 @@ import sys
 from subprocess import Popen, PIPE
 
 
+
+def remove_node(trees, node_id):
+    '''
+    Remove the first found (depth first) occurrence of a node in a set of trees
+    
+    @param   trees:itr<dict<str, _|itr<↑>|¿I?>>  The trees
+    @param   node_id:¿I?                         The identifier for the node
+    @return  :bool                               Whether the node was found; intended for method internal use
+    '''
+    for i in range(len(trees)):
+        if ('id' in trees[i]) and (trees[i]['id'] == node_id):
+            trees.remove(i)
+            return True
+        if 'inner' in trees[i]:
+            if remove_nodes(trees[i][inner], node_id):
+                return True
+    return False
+
+
+
 class Tree():
     '''
     Feed tree class
@@ -41,7 +61,7 @@ class Tree():
         self.feeds = feeds
         
         self.islinux = ('TERM' not in os.environ) or (os.environ['TERM'] == 'linux')
-        count = self.count_new(feeds)
+        count = Tree.count_new(feeds)
         
         self.select_stack = [(None, None)]
         self.collapsed_count = 0
@@ -58,7 +78,8 @@ class Tree():
         self.last_select = None
     
     
-    def count_new(self, feeds):
+    @staticmethod
+    def count_new(feeds):
         '''
         Recursively count the number of new entries
         
@@ -69,7 +90,7 @@ class Tree():
         for feed in feeds:
             count = 0
             if 'inner' in feed:
-                count = self.count_new(feed['inner'])
+                count = Tree.count_new(feed['inner'])
                 feed['new'] = count
             else:
                 count = feed['new']
@@ -77,7 +98,8 @@ class Tree():
         return rc
     
     
-    def is_expanded(self, feed):
+    @staticmethod
+    def is_expanded(feed):
         '''
         Check whether a feed is expanded
         
@@ -100,7 +122,7 @@ class Tree():
         title = feed['title']
         prefix = indent + ('└' if last else '├')
         collapsed = False
-        if ('inner' not in feed) or (self.is_expanded(feed)):
+        if ('inner' not in feed) or (Tree.is_expanded(feed)):
             prefix += '── ' if self.islinux else '─╼ '
         else:
             collapsed = True
@@ -236,7 +258,7 @@ class Tree():
                             else:
                                 cur = self.select_stack[-1][0]
                                 curi = self.select_stack[-1][1]
-                                if ('inner' in cur) and self.is_expanded(cur):
+                                if ('inner' in cur) and Tree.is_expanded(cur):
                                     self.select_stack.append((cur['inner'][0], 0))
                                     tline += 1
                                 else:
@@ -280,7 +302,7 @@ class Tree():
                         curi -= 1
                         cur = par[curi]
                         self.select_stack.append((cur, curi))
-                        while ('inner' in cur) and self.is_expanded(cur):
+                        while ('inner' in cur) and Tree.is_expanded(cur):
                             curi = len(cur['inner']) - 1
                             cur = cur['inner'][curi]
                             self.select_stack.append((cur, curi))
@@ -303,7 +325,7 @@ class Tree():
                 else:
                     cur = self.select_stack[-1][0]
                     curi = self.select_stack[-1][1]
-                    if ('inner' in cur) and self.is_expanded(cur):
+                    if ('inner' in cur) and Tree.is_expanded(cur):
                         self.select_stack.append((cur['inner'][0], 0))
                         self.print_tree()
                     else:
@@ -345,7 +367,7 @@ class Tree():
                     cur = self.select_stack[-1][0]
                     curi = self.select_stack[-1][1]
                     if 'inner' in cur:
-                        if not self.is_expanded(cur):
+                        if not Tree.is_expanded(cur):
                             cur['expanded'] = True
                             self.collapsed_count -= 1
                         self.select_stack.append((cur['inner'][0], 0))
@@ -362,7 +384,7 @@ class Tree():
                 if cur is None:
                     def expand(feed, value):
                         if 'inner' in feed:
-                            cur_value = self.is_expanded(feed)
+                            cur_value = Tree.is_expanded(feed)
                             if cur_value != value:
                                 feed['expanded'] = value
                                 self.collapsed_count += -1 if value else 1
@@ -374,7 +396,7 @@ class Tree():
                     self.draw_force = True
                 else:
                     if 'inner' in cur:
-                        value = not self.is_expanded(cur)
+                        value = not Tree.is_expanded(cur)
                         self.collapsed_count += -1 if value else 1
                         cur['expanded'] = value
                         cur['draw_line'] = -1
