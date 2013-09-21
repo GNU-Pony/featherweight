@@ -158,7 +158,9 @@ try:
                     saved = True
                 text_area = TextArea(['Title', 'URL'], table)
                 text_area.initialise(False)
+                print('\033[?25h\033[?9l', end = '', flush = True)
                 text_area.run(saver)
+                print('\033[?9h\033[?25l', end = '', flush = True)
                 text_area.close()
                 gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
                 gettext.textdomain('@PKGNAME@')
