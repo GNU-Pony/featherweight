@@ -156,6 +156,7 @@ try:
                     values['title'] = table['Title']
                     values['url'] = None if table['URL'] == '' else table['URL']
                     saved = True
+                    return True
                 text_area = TextArea(['Title', 'URL'], table)
                 text_area.initialise(False)
                 print('\033[?25h\033[?9l', end = '', flush = True)
