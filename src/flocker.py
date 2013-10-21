@@ -42,7 +42,7 @@ def flock(file, exclusive, nonblocking = False):
     @param  nonblocking:bool  Whether to fail if an conflicting lock is already applied by a another process
     '''
     locktype = (fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH) | (fcntl.LOCK_NB if nonblocking else 0)
-    fcntl.fcntl(file.fileno(), locktype)
+    fcntl.flock(file.fileno(), locktype)
 
 
 def unflock(file):
@@ -51,5 +51,5 @@ def unflock(file):
     
     @param  file:file  The file handle
     '''
-    fcntl.fcntl(file.fileno(), fcntl.LOCK_UN)
+    fcntl.flock(file.fileno(), fcntl.LOCK_UN)
 
