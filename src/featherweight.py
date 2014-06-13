@@ -34,12 +34,6 @@ from updater import *
 from editor import *
 
 
-old_stty = Popen('stty --save'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
-old_stty = old_stty.decode('utf-8', 'error')[:-1]
-
-Popen('stty -icanon -echo'.split(' '), stdout = PIPE, stderr = PIPE).communicate()
-
-
 args = sys.argv[1:]
 update = '--update' in args
 system = '--system' in args
@@ -92,6 +86,12 @@ with touch('%s/feeds' % root) as feeds_flock:
 
 if system:
     sys.exit(0)
+
+
+old_stty = Popen('stty --save'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
+old_stty = old_stty.decode('utf-8', 'error')[:-1]
+
+Popen('stty -icanon -echo'.split(' '), stdout = PIPE, stderr = PIPE).communicate()
 
 print('\033[?1049h\033[?25l\033[?9h', end = '', flush = True)
 
