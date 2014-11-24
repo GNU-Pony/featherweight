@@ -4,5 +4,5 @@ A lightweight news syndication aggregator for your terminal shell.
 Featherweight is designed to pull down the latest news as a cron job,
 and be browsed in your terminal. Due to it running as a cron job you are
 able to display the number of new news in your shell prompt line (PS1)
-and not have an application constantly opened in the background.
+and not have an application constantly open in the background.
 
