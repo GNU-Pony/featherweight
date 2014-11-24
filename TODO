@@ -1,0 +1,5 @@
+There are glitches when closing nodes on the tree.
+
+Branches with no unread entries should be closed
+when a tree is firsted opened.
+

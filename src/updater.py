@@ -35,7 +35,7 @@ def update_feed(feed, if_group):
     if 'inner' in feed:
         for feed in feed['inner']:
             update_feed(feed, if_group)
-    elif (if_group is None) or (feed['group'] == if_group):
+    elif ((if_group is None) or (feed['group'] == if_group)) and ('url' in feed) and (feed['url'] is not None):
         id = feed['id']
         with touch('%s/%s' % (root, id)) as feed_flock:
             flock(feed_flock, True)

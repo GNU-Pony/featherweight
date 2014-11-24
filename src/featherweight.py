@@ -28,6 +28,7 @@ from flocker import *
 from trees import *
 from updater import *
 from editor import *
+from feeds import *
 
 
 args = sys.argv[1:]
@@ -154,9 +155,11 @@ try:
                 print('\033[H\033[2J', end = '', flush = True)
                 tree.draw_force = True
         elif action == 'open':
-            print(node)
-            sys.stdin.read(1)
-            pass
+            if (node is None) or ('url' not in node) or (node['url'] is None) or (node['url'] == ''):
+                continue
+            if open_feed(node):
+                break
+            tree.draw_force = True
         elif action == 'add':
             if (node is None) or ('url' not in node) or (node['url'] is None) or (node['url'] == ''):
                 table = {'Title' : '', 'Group' : '', 'URL' : ''}

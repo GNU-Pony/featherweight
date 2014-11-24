@@ -142,7 +142,7 @@ class Tree():
             if 'inner' in feed:
                 count = Tree.count_new(feed['inner'])
                 feed['new'] = count
-            else:
+            elif 'new' in feed:
                 count = feed['new']
             rc += count
         return rc
@@ -177,9 +177,10 @@ class Tree():
         else:
             collapsed = True
             prefix += '─┘ ' if self.islinux else '─┚ '
-        if feed['new'] > 0:
+        has_new = ('new' in feed) and (feed['new'] > 0)
+        if has_new:
             prefix += '\033[01;31m(%i)\033[00m ' % feed['new']
-        prefixlen = len('%s--- %s' % (indent, ('(%i) ' % feed['new']) if feed['new'] > 0 else ''))
+        prefixlen = len('%s--- %s' % (indent, ('(%i) ' % feed['new']) if has_new else ''))
         if prefixlen + len(title) > width:
             if width - prefixlen - 3 >= 0:
                 title = title[: width - prefixlen - 3] + '...'
