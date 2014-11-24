@@ -67,17 +67,10 @@ with touch('%s/feeds' % root) as feeds_flock:
                 group = arg
                 break
         
-        def update_feed(feed, if_group):
-            if 'inner' in feed:
-                for feed in feed['inner']:
-                    update_feed(feed, if_group)
-            elif (if_group is None) or (feed['group'] == if_group):
-                pass # TODO update feed
-        
         for feed in feeds:
             update_feed(feed, group)
         
-        updated = str(feeds)
+        updated = repr(feeds)
         with open('%s/feeds' % root, 'wb') as file:
             file.write(updated.encode('utf-8'))
     
@@ -118,7 +111,7 @@ def update_feeds(function):
         _feeds = eval(_feeds)
         function(_feeds)
         Tree.count_new(_feeds)
-        _feeds = str(_feeds)
+        _feeds = repr(_feeds)
         try:
             with open('%s/feeds' % root, 'wb') as file:
                 file.write(_feeds.encode('utf-8'))

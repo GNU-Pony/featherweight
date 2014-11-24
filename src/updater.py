@@ -24,7 +24,15 @@ from flocker import *
 from parser import *
 
 
+
 def update_feed(feed, if_group):
+    '''
+    Upgrade a feed and its subfeeds
+    
+    @param  feed:dict<str, _|int|itr<↑>>  The feed
+    @param  if_group:str?                 The name of the group the feed should belong to
+                                          for it to be updated, `None` to update everything
+    '''
     if 'inner' in feed:
         for feed in feed['inner']:
             update_feed(feed, if_group)
@@ -60,7 +68,7 @@ def update_feed(feed, if_group):
         
         feed['new'] = len(unread)
         with open('%s/%s' % (root, uuid), 'wb') as file:
-            file.write(str(feed_info).decode('utf-8'))
+            file.write(repr(feed_info).decode('utf-8'))
             file.flush()
         unflock(feed_flock)
 
