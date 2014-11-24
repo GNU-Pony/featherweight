@@ -31,6 +31,7 @@ from editor import *
 
 
 args = sys.argv[1:]
+status = '--status' in args
 update = '--update' in args
 system = '--system' in args
 
@@ -44,17 +45,30 @@ with touch('%s/feeds' % root) as feeds_flock:
     with open('%s/feeds' % root, 'rb') as file:
         feeds = file.read().decode('utf-8', 'strict')
     feeds = [] if len(feeds) == 0 else eval(feeds)
-    if update:
+    if update or status:
         group = None
         for arg in args:
             if not arg.startswith('-'):
                 group = arg
                 break
-        for feed in feeds:
-            update_feed(feed, group)
-        updated = repr(feeds)
-        with open('%s/feeds' % root, 'wb') as file:
-            file.write(updated.encode('utf-8'))
+        if update:
+            for feed in feeds:
+                update_feed(feed, group)
+            updated = repr(feeds)
+            with open('%s/feeds' % root, 'wb') as file:
+                file.write(updated.encode('utf-8'))
+        if status:
+            def get_status(feeds, in_group):
+                global group
+                count = 0
+                for feed in feeds:
+                    inside = in_group or (feed['group'] == group)
+                    if 'inner' in feed:
+                        count += get_status(feed['inner'], inside)
+                    elif inside:
+                        count += feed['new']
+                return count
+            print(get_status(feeds, group is None))
     unflock(feeds_flock)
 
 
@@ -110,8 +124,9 @@ try:
             break
         elif action == 'edit':
             if node is not None:
-                table = {'Title' : node['title'], 'URL' : '' if node['url'] is None else node['url']}
+                table = {'Title' : node['title'], 'Group' : node['group'], 'URL' : '' if node['url'] is None else node['url']}
                 values = {}
+                saved = False
                 def saver():
                     global table, saved, values, node
                     if table['Title'] == '':
@@ -122,10 +137,11 @@ try:
                         else:
                             return False
                     values['title'] = table['Title']
+                    values['group'] = table['Group']
                     values['url'] = None if table['URL'] == '' else table['URL']
                     saved = True
                     return True
-                text_area = TextArea(['Title', 'URL'], table)
+                text_area = TextArea(['Title', 'Group', 'URL'], table)
                 text_area.initialise(False)
                 print('\033[?25h\033[?9l', end = '', flush = True)
                 text_area.run(saver)
@@ -143,7 +159,7 @@ try:
             pass
         elif action == 'add':
             if (node is None) or ('url' not in node) or (node['url'] is None) or (node['url'] == ''):
-                table = {'Title' : '', 'URL' : ''}
+                table = {'Title' : '', 'Group' : '', 'URL' : ''}
                 values = {'id' : str(uuid.uuid4()), 'new' : 0}
                 saved = False
                 def saver():
@@ -151,10 +167,11 @@ try:
                     if table['Title'] == '':
                         return False
                     values['title'] = table['Title']
+                    values['group'] = None if table['Group'] == '' else table['Group']
                     values['url'] = None if table['URL'] == '' else table['URL']
                     saved = True
                     return True
-                text_area = TextArea(['Title', 'URL'], table)
+                text_area = TextArea(['Title', 'Group', 'URL'], table)
                 text_area.initialise(False)
                 print('\033[?25h\033[?9l', end = '', flush = True)
                 text_area.run(saver)
