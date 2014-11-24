@@ -67,6 +67,32 @@ def insert_node(trees, node_id, node):
 
 
 
+def update_node(trees, node_id, values):
+    '''
+    Insert a new node into the tree
+    
+    @param   trees:itr<dict<str, _|itr<↑>|¿I?>>  The trees
+    @param   node_id:¿I?                         The identifier for the new node's parent
+    @param   values:dict<str, _>                 The new node values
+    @return  :bool                               Whether the node was found; intended for method internal use
+    '''
+    for i in range(len(trees)):
+        if ('id' in trees[i]) and (trees[i]['id'] == node_id):
+            for key in values.keys():
+                value = values[key]
+                if value == ...:
+                    if key in trees[i]:
+                        del trees[i][key]
+                else:
+                    trees[i][key] = value
+            return True
+        if 'inner' in trees[i]:
+            if update_node(trees[i]['inner'], node_id, values):
+                return True
+    return False
+
+
+
 class Tree():
     '''
     Feed tree class

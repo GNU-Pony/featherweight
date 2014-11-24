@@ -90,12 +90,11 @@ def update_feeds(function):
         Tree.count_new(feeds)
         _feeds = None
         with open('%s/feeds' % root, 'rb') as file:
-            _feeds = file.read().decode('utf-8', 'strict')
+            _feeds = file.read()
             with open('%s/feeds.bak' % root, 'wb') as bakfile:
-                bakfile.write(str(_feeds).encode('utf-8'))
-        if len(_feeds) == 0:
-            _feeds = '[]'
-        _feeds = eval(_feeds)
+                bakfile.write(_feeds)
+            _feeds = _feeds.decode('utf-8', 'strict')
+        _feeds = [] if len(_feeds) == 0 else eval(_feeds)
         function(_feeds)
         Tree.count_new(_feeds)
         _feeds = repr(_feeds)
@@ -119,9 +118,33 @@ try:
             break
         elif action == 'edit':
             if node is not None:
-                print(node)
-                sys.stdin.read(1)
-                pass
+                table = {'Title' : node['title'], 'URL' : '' if node['url'] is None else node['url']}
+                values = {}
+                def saver():
+                    global table, saved, values, node
+                    if table['Title'] == '':
+                        return False
+                    if (not table['URL'] == '') and ('inner' in node):
+                        if (node['inner'] is None) or (len(node['inner']) == 0):
+                            values['inner'] = ...
+                        else:
+                            return False
+                    values['title'] = table['Title']
+                    values['url'] = None if table['URL'] == '' else table['URL']
+                    saved = True
+                    return True
+                text_area = TextArea(['Title', 'URL'], table)
+                text_area.initialise(False)
+                print('\033[?25h\033[?9l', end = '', flush = True)
+                text_area.run(saver)
+                print('\033[?9h\033[?25l', end = '', flush = True)
+                text_area.close()
+                gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
+                gettext.textdomain('@PKGNAME@')
+                if saved:
+                    update_feeds(lambda t : update_node(t, None if node is None else node['id'], values))
+                print('\033[H\033[2J', end = '', flush = True)
+                tree.draw_force = True
         elif action == 'open':
             print(node)
             sys.stdin.read(1)
