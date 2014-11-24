@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 '''
 featherweight – A lightweight terminal news feed reader
 
