@@ -89,7 +89,7 @@ class Tree():
         self.collapsed_count = 0
         
         height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
-        (height, width) = height_width.decode('utf-8', 'error')[:-1].split(' ')
+        (height, width) = height_width.decode('utf-8', 'strict')[:-1].split(' ')
         height, width = int(height), int(width)
         
         self.line = 0
@@ -188,7 +188,7 @@ class Tree():
         self.line = 0
         self.curline = 0
         height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
-        (height, width) = height_width.decode('utf-8', 'error')[:-1].split(' ')
+        (height, width) = height_width.decode('utf-8', 'strict')[:-1].split(' ')
         height, width = int(height), int(width)
         
         if self.last_select is not self.select_stack[-1][0]:

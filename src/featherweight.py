@@ -23,11 +23,7 @@ import sys
 import uuid
 from subprocess import Popen, PIPE
 
-import gettext
-gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
-gettext.textdomain('@PKGNAME@')
-_ = gettext.gettext
-
+from common import *
 from flocker import *
 from trees import *
 from updater import *
@@ -39,15 +35,6 @@ update = '--update' in args
 system = '--system' in args
 
 
-islinux = ('TERM' in os.environ) and (os.environ['TERM'] == 'linux')
-home = os.environ['HOME']
-
-quote = (lambda x : "'%s'" % x) if islinux else (lambda x : '‘%s’' % x)
-double_quote = (lambda x : '"%s"' % x) if islinux else (lambda x : '“%s”' % x)
-abbr = lambda x : ('~%s' % x[len(home):] if x.startswith(home + '/') else x)
-
-
-root = '%s/.featherweight' % home
 if not os.path.exists(root):
     os.makedirs(root)
 
@@ -55,7 +42,7 @@ feeds = None
 with touch('%s/feeds' % root) as feeds_flock:
     flock(feeds_flock, False)
     with open('%s/feeds' % root, 'rb') as file:
-        feeds = file.read().decode('utf-8', 'error')
+        feeds = file.read().decode('utf-8', 'strict')
     if len(feeds) == 0:
         feeds = '[]'
     feeds = eval(feeds)
@@ -82,7 +69,7 @@ if system:
 
 
 old_stty = Popen('stty --save'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
-old_stty = old_stty.decode('utf-8', 'error')[:-1]
+old_stty = old_stty.decode('utf-8', 'strict')[:-1]
 
 Popen('stty -icanon -echo'.split(' '), stdout = PIPE, stderr = PIPE).communicate()
 
@@ -103,7 +90,7 @@ def update_feeds(function):
         Tree.count_new(feeds)
         _feeds = None
         with open('%s/feeds' % root, 'rb') as file:
-            _feeds = file.read().decode('utf-8', 'error')
+            _feeds = file.read().decode('utf-8', 'strict')
             with open('%s/feeds.bak' % root, 'wb') as bakfile:
                 bakfile.write(str(_feeds).encode('utf-8'))
         if len(_feeds) == 0:
@@ -142,7 +129,7 @@ try:
         elif action == 'add':
             if (node is None) or ('url' not in node) or (node['url'] is None) or (node['url'] == ''):
                 table = {'Title' : '', 'URL' : ''}
-                values = {'id' : str(uuid.uuid4())}
+                values = {'id' : str(uuid.uuid4()), 'new' : 0}
                 saved = False
                 def saver():
                     global table, values, saved
@@ -159,7 +146,7 @@ try:
                 gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
                 gettext.textdomain('@PKGNAME@')
                 if saved:
-                    update_feeds(lambda t : insert_node(t, node['id'], values))
+                    update_feeds(lambda t : insert_node(t, None if node is None else node['id'], values))
                 print('\033[H\033[2J', end = '', flush = True)
                 tree.draw_force = True
         elif action == 'delete':

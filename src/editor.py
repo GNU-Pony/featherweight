@@ -125,7 +125,7 @@ class TextArea():
         if width  is None: width  = 0
         if height is None: height = 0
         if (width <= 0) or (height <= 0):
-            screen_size = Popen('stty size'.split(' '), stdout = PIPE).communicate()[0].decode('utf-8', 'error')[:-1].split(' ')
+            screen_size = Popen('stty size'.split(' '), stdout = PIPE).communicate()[0].decode('utf-8', 'strict')[:-1].split(' ')
             if width <= 0:   width  += int(screen_size[1]) - left + 1
             if height <= 0:  height += int(screen_size[0]) - top  + 1
         self.fields, self.datamap, self.left, self.top, self.width, self.height = fields, datamap, left, top, width - 1, height
@@ -148,7 +148,7 @@ class TextArea():
             print('\033[?1049h', end='', flush=True)
         print('\033[H\033[2J', end='', flush=True)
         self.old_stty = Popen('stty --save'.split(' '), stdout = PIPE).communicate()[0]
-        self.old_stty = self.old_stty.decode('utf-8', 'error')[:-1]
+        self.old_stty = self.old_stty.decode('utf-8', 'strict')[:-1]
         Popen('stty -icanon -echo -isig -ixon -ixoff'.split(' '), stdout = PIPE).communicate()
     
     def close(self):
