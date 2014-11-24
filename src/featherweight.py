@@ -43,24 +43,18 @@ with touch('%s/feeds' % root) as feeds_flock:
     flock(feeds_flock, False)
     with open('%s/feeds' % root, 'rb') as file:
         feeds = file.read().decode('utf-8', 'strict')
-    if len(feeds) == 0:
-        feeds = '[]'
-    feeds = eval(feeds)
-    
+    feeds = [] if len(feeds) == 0 else eval(feeds)
     if update:
         group = None
         for arg in args:
             if not arg.startswith('-'):
                 group = arg
                 break
-        
         for feed in feeds:
             update_feed(feed, group)
-        
         updated = repr(feeds)
         with open('%s/feeds' % root, 'wb') as file:
             file.write(updated.encode('utf-8'))
-    
     unflock(feeds_flock)
 
 
@@ -70,9 +64,7 @@ if system:
 
 old_stty = Popen('stty --save'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'strict')[:-1]
-
 Popen('stty -icanon -echo'.split(' '), stdout = PIPE, stderr = PIPE).communicate()
-
 print('\033[?1049h\033[?25l\033[?9h', end = '', flush = True)
 
 
