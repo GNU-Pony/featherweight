@@ -23,6 +23,7 @@ import uuid
 from subprocess import Popen, PIPE
 
 from common import *
+from common import _
 from flocker import *
 from trees import *
 from updater import *
@@ -132,6 +133,8 @@ try:
                 saved = False
                 def saver():
                     global table, values, saved
+                    if table['Title'] == '':
+                        return False
                     values['title'] = table['Title']
                     values['url'] = None if table['URL'] == '' else table['URL']
                     saved = True

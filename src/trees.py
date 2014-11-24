@@ -32,10 +32,12 @@ def remove_node(trees, node_id):
     '''
     for i in range(len(trees)):
         if ('id' in trees[i]) and (trees[i]['id'] == node_id):
-            trees.remove(i)
+            del trees[i]
             return True
         if 'inner' in trees[i]:
             if remove_node(trees[i]['inner'], node_id):
+                if len(trees[i]['inner']) == 0:
+                    del trees[i]['inner']
                 return True
     return False
 
@@ -55,6 +57,8 @@ def insert_node(trees, node_id, node):
         return True
     for i in range(len(trees)):
         if ('id' in trees[i]) and (trees[i]['id'] == node_id):
+            if 'inner' not in trees[i]:
+                trees[i]['inner'] = []
             return insert_node(trees[i]['inner'], None, node)
         if 'inner' in trees[i]:
             if insert_node(trees[i]['inner'], node_id, node):
