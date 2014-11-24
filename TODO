@@ -3,3 +3,5 @@ There are glitches when closing nodes on the tree.
 Branches with no unread entries should be closed
 when a tree is firsted opened.
 
+'n'-key should make a jump to the next unread message.
+
