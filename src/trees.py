@@ -69,10 +69,10 @@ def insert_node(trees, node_id, node):
 
 def update_node(trees, node_id, values):
     '''
-    Insert a new node into the tree
+    Update the values of a node in a tree
     
     @param   trees:itr<dict<str, _|itr<↑>|¿I?>>  The trees
-    @param   node_id:¿I?                         The identifier for the new node's parent
+    @param   node_id:¿I?                         The identifier for the node
     @param   values:dict<str, _>                 The new node values
     @return  :bool                               Whether the node was found; intended for method internal use
     '''
@@ -93,6 +93,27 @@ def update_node(trees, node_id, values):
 
 
 
+def update_node_newness(trees, node_id, mod):
+    '''
+    Update the 'new' value of a node and its ancestors
+    
+    @param   trees:itr<dict<str, _|itr<↑>|¿I?>>  The trees
+    @param   node_id:¿I?                         The identifier for the node
+    @param   mod:int                             How much to add to the 'new' value
+    @return  :bool                               Whether the node was found; intended for method internal use
+    '''
+    for i in range(len(trees)):
+        if ('id' in trees[i]) and (trees[i]['id'] == node_id):
+            trees[i]['new'] += mod
+            return True
+        if 'inner' in trees[i]:
+            if update_node_newness(trees[i]['inner'], node_id, mod):
+                trees[i]['new'] += mod
+                return True
+    return False
+
+
+
 class Tree():
     '''
     Feed tree class
@@ -105,13 +126,13 @@ class Tree():
         @param  root:str                        The title of the root
         @param  feeds:itr<dict<str, _|itr<↑>>>  Feeds
         '''
-        global count, height, width
+        global height, width
         
         self.root = root
         self.feeds = feeds
         
         self.islinux = ('TERM' not in os.environ) or (os.environ['TERM'] == 'linux')
-        count = Tree.count_new(feeds)
+        self.count = Tree.count_new(feeds)
         
         self.select_stack = [(None, None)]
         self.collapsed_count = 0
@@ -213,7 +234,7 @@ class Tree():
         '''
         Print the entire tree
         '''
-        global height, width, count
+        global height, width
         self.line = 0
         self.curline = 0
         height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
@@ -234,8 +255,8 @@ class Tree():
             title = '\033[01;34m%s\033[00m' % title
         if self.lineoff <= self.curline < self.lineoff + height:
             if self.draw_force or ((self.last_select is not None) == (self.select_stack[-1][0] is None)):
-                if count > 0:
-                    print('\033[01;31m(%i)\033[00m ' % count, end = '')
+                if self.count > 0:
+                    print('\033[01;31m(%i)\033[00m ' % self.count, end = '')
                 print(title, end = '')
         self.line += 1
         self.curline += 1

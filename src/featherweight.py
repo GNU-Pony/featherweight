@@ -157,7 +157,10 @@ try:
         elif action == 'open':
             if (node is None) or ('url' not in node) or (node['url'] is None) or (node['url'] == ''):
                 continue
-            if open_feed(node):
+            def update(new):
+                tree.count += new
+                update_feeds(lambda t : update_node_newness(t, node['id'], new))
+            if open_feed(node, update):
                 break
             tree.draw_force = True
         elif action == 'add':

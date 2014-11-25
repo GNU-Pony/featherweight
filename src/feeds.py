@@ -42,16 +42,19 @@ MONTHS = { 1 : 'January',
 
 
 
-def open_feed(feed_node):
+def load_feed(id):
     '''
-    Inspect a feed
+    Load the feeds
     
-    @param   feed_node:dict<str, _|str>  The node in the feed tree we the feed we are inspecting
-    @return  :bool                       Whether the entire program should exit
+    @param   id:str                                    The ID of the feed
+    @return  :(entries:itr<dict<str, int|str|↑>>,      Feed entries
+               years:dict<str|int, int|str|↑|itr<↑>>,  Mapping for dates to branches in `entries`,
+                                                       `years[2014][11][25]['inner']` lists all feeds entries
+                                                       for 2014-(11)Nov-25.
+               have:set<str>,                          A set of all ID:s of the leaves in `entries`
+               unread:set<str>)                        A set of all ID:s of the read leaves in `entries`
     '''
-    id = feed_node['id']
     next_id = 0
-    
     entries = []
     years = {}
     with touch('%s/%s' % (root, id)) as feed_flock:
@@ -69,7 +72,7 @@ def open_feed(feed_node):
             
             feed_info = feed_info.decode('utf-8', 'strict')
             feed_info = eval(feed_info) if len(feed_info) > 0 else {}
-            have = set() if 'have' not in feed_info else feed_info['have']
+            have   = set() if 'have'   not in feed_info else feed_info['have']
             unread = set() if 'unread' not in feed_info else feed_info['unread']
             
             if feed_data is not None:
@@ -126,6 +129,55 @@ def open_feed(feed_node):
             for day in month['inner']:
                 day['inner'].sort(key = lambda x : -(x['time']))
     
+    return (entries, years, have, unread)
+
+
+
+def update_entires(feed_id, function):
+    '''
+    Update the entries in a feed
+    
+    @param   feed_id:str                           The ID of the feed
+    @param   function:(have:set, unread:set)→void  Function that modifies the feed information
+    @return  :bool                                 Whether the feed was updated
+    '''
+    updated = False
+    with touch('%s/%s' % (root, feed_id)) as feed_flock:
+        flock(feed_flock, True)
+        feed_info = None
+        try:
+            with open('%s/%s' % (root, feed_id), 'rb') as file:
+                feed_info = file.read()
+        except:
+            pass
+        if feed_info is not None:
+            feed_info = feed_info.decode('utf-8', 'strict')
+            feed_info = eval(feed_info) if len(feed_info) > 0 else {}
+            have   = set() if 'have'   not in feed_info else feed_info['have']
+            unread = set() if 'unread' not in feed_info else feed_info['unread']
+            updated_ = len(have) + len(unread)
+            function(have, unread)
+            feed_info = repr(feed_info).encode('utf-8')
+            with open('%s/%s' % (root, feed_id), 'wb') as file:
+                file.write(feed_info)
+            if not updated_ == len(have) + len(unread):
+                updated = True
+        unflock(feed_flock)
+    return updated
+
+
+
+def open_feed(feed_node, recall):
+    '''
+    Inspect a feed
+    
+    @param   feed_node:dict<str, _|str>  The node in the feed tree we the feed we are inspecting
+    @param   recall:(:int)→void          Notify the previous try about an update, the parameter
+                                         specifies how much should be added to ['new']
+    @return  :bool                       Whether the entire program should exit
+    '''
+    id = feed_node['id']
+    (entries, years, have, unread) = load_feed(id)
     tree = Tree(feed_node['title'], entries)
     while True:
         (action, node) = tree.interact()
@@ -142,7 +194,35 @@ def open_feed(feed_node):
         elif action == 'delete':
             pass # TODO
         elif action == 'read':
-            pass # TODO
+            if (node is None) or ('inner' in node) or (node['new'] == 0):
+                continue
+            eid = node['id']
+            updated = update_entires(id, lambda _, unread : unread.remove(eid) if eid in unread else None)
+            if eid in unread:
+                unread.remove(eid)
+            pubdate = node['pubdate']
+            tree.count -= 1
+            years[pubdate[0]]['new'] -= 1
+            years[pubdate[0]][pubdate[1]]['new'] -= 1
+            years[pubdate[0]][pubdate[1]][pubdate[2]]['new'] -= 1
+            node['new'] -= 1
+            if updated:
+                recall(-1)
+            tree.draw_force = True
         elif action == 'unread':
-            pass # TODO
+            if (node is None) or ('inner' in node) or (node['new'] >= 1):
+                continue
+            eid = node['id']
+            updated = update_entires(id, lambda _, unread : unread.add(eid) if eid not in unread else None)
+            if eid in unread:
+                unread.add(eid)
+            pubdate = node['pubdate']
+            tree.count += 1
+            years[pubdate[0]]['new'] += 1
+            years[pubdate[0]][pubdate[1]]['new'] += 1
+            years[pubdate[0]][pubdate[1]][pubdate[2]]['new'] += 1
+            node['new'] += 1
+            if updated:
+                recall(+1)
+            tree.draw_force = True
 

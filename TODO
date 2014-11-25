@@ -5,3 +5,5 @@ when a tree is firsted opened.
 
 'n'-key should make a jump to the next unread message.
 
+Ctrl+down is strange when at the last node.
+

@@ -26,7 +26,7 @@ from parser import *
 
 def update_feed(feed, if_group):
     '''
-    Upgrade a feed and its subfeeds
+    Update a feed and its subfeeds
     
     @param  feed:dict<str, _|int|itr<↑>>  The feed
     @param  if_group:str?                 The name of the group the feed should belong to
