@@ -151,7 +151,7 @@ def parse_feed(feed):
             if item is None:
                 if name == 'entry':
                     item = {}
-        elif name == 'rss':
+        elif name in ('rss', 'rdf', 'rdf:rdf'):
             is_rss = True
         elif name == 'feed':
             is_atom = True
@@ -176,7 +176,7 @@ def parse_feed(feed):
                     root[name] = text
                 elif name == 'channel':
                     feeds.append(root)
-                    root = None
+                    #root = None
                 elif name == 'rss':
                     is_rss = False
         elif (root is not None) and is_atom:
@@ -208,7 +208,7 @@ def parse_feed(feed):
                         root['link'] = text
                 elif name == 'feed':
                     feeds.append(root)
-                    root = None
+                    #root = None
                     is_atom = False
         text = None
     
