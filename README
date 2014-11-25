@@ -36,5 +36,5 @@ Navigation:
 	N		Go to the previous unread leaf node
 	p		Go to the previous unread leaf node
 	
-	the mouse works in xterm-compatible terminals, double click to open a node.
+	The mouse works in xterm-compatible terminals, double click to open a node.
 
