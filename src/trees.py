@@ -138,11 +138,11 @@ class Tree():
         self.collapsed_count = 0
         
         def autocollapse(feed):
-            if ('new' not in feed) or (feed['new'] == 0):
-                feed['expanded'] = False
-                self.collapsed_count += 1
-                if 'inner' in feed:
-                    [autocollapse(feed) for feed in feed['inner']]
+            if 'inner' in feed:
+                if ('new' not in feed) or (feed['new'] == 0):
+                    feed['expanded'] = False
+                    self.collapsed_count += 1
+                [autocollapse(feed) for feed in feed['inner']]
         [autocollapse(feed) for feed in feeds]
         
         height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
@@ -186,6 +186,17 @@ class Tree():
         @return  :bool                   Whether the feed is expanded
         '''
         return ('expanded' not in feed) or feed['expanded']
+    
+    
+    @staticmethod
+    def is_leaf(node):
+        '''
+        Check whether a node is a leaf
+        
+        @param   node:dict<str, _|bool>?  The node
+        @return  :bool                    Whether the node is a leaf
+        '''
+        return (node is not None) and ('inner' not in node)
     
     
     def print_node(self, feed, last, indent, force):
@@ -459,7 +470,7 @@ class Tree():
             elif buf.endswith('\033[1;5D'):
                 self.select_stack[:] = self.select_stack[:1]
                 self.print_tree()
-            elif buf.endswith(' '):
+            elif buf.endswith(' ') or (buf.endswith('\n') and not Tree.is_leaf(self.select_stack[-1][0])):
                 cur = self.select_stack[-1][0]
                 if cur is None:
                     def expand(feed, value):
@@ -484,10 +495,68 @@ class Tree():
             elif buf.endswith(chr(ord('L') - ord('@'))):
                 self.draw_force = True
                 self.print_tree()
+            elif buf.endswith('n') or buf.endswith('P') or buf.endswith('N') or buf.endswith('p'):
+                if self.count == 0:
+                    continue
+                downward = buf.endswith('n') or buf.endswith('P')
+                while True:
+                    cur = self.select_stack[-1][0]
+                    if cur is None:
+                        if downward:
+                            self.select_stack.append((self.feeds[0], 0))
+                        else:
+                            self.select_stack.append((self.feeds[-1], len(self.feeds) - 1))
+                            while 'inner' in self.select_stack[-1][0]:
+                                inners = self.select_stack[-1][0]['inner']
+                                self.select_stack.append((inners[-1], len(inners) - 1))
+                    elif downward:
+                        curi = self.select_stack[-1][1]
+                        if 'inner' in cur:
+                            self.select_stack.append((cur['inner'][0], 0))
+                        else:
+                            restart = True
+                            while len(self.select_stack) > 1:
+                                par = self.select_stack[-2][0]
+                                par = self.feeds if par is None else par['inner']
+                                self.select_stack.pop()
+                                if curi + 1 < len(par):
+                                    self.select_stack.append((par[curi + 1], curi + 1))
+                                    restart = False
+                                    break
+                                cur = self.select_stack[-1][0]
+                                curi = self.select_stack[-1][1]
+                            if restart:
+                                self.select_stack[:] = self.select_stack[:1]
+                                continue
+                    else:
+                        curi = self.select_stack[-1][1]
+                        self.select_stack.pop()
+                        if curi > 0:
+                            par = self.select_stack[-1][0]
+                            par = self.feeds if par is None else par['inner']
+                            curi -= 1
+                            cur = par[curi]
+                            self.select_stack.append((cur, curi))
+                            while 'inner' in cur:
+                                curi = len(cur['inner']) - 1
+                                cur = cur['inner'][curi]
+                                self.select_stack.append((cur, curi))
+                        if self.select_stack[-1][0] is None:
+                            continue
+                    cur = self.select_stack[-1][0]
+                    if ('inner' not in cur) and ('new' in cur) and (cur['new'] > 0):
+                        break
+                for stack_item in self.select_stack[1:]:
+                    stack_item = stack_item[0]
+                    if not Tree.is_expanded(stack_item):
+                        stack_item['expanded'] = True
+                        self.collapsed_count -= 1
+                        self.draw_force = True
+                self.print_tree()
             elif buf.endswith('q'):   return ('quit',   None)
             elif buf.endswith('e'):   return ('edit',   self.select_stack[-1][0])
             elif buf.endswith('+'):   return ('add',    self.select_stack[-1][0])
-            elif buf.endswith('D'):   return ('delete', self.select_stack[-1][0])
+            elif buf.endswith('d'):   return ('delete', self.select_stack[-1][0])
             elif buf.endswith('r'):   return ('read',   self.select_stack[-1][0])
             elif buf.endswith('R'):   return ('unread', self.select_stack[-1][0])
             elif buf.endswith('u'):   return ('up',     self.select_stack[-1][0])

@@ -1,7 +1,5 @@
 There are glitches when closing nodes on the tree.
 
-'n'-key should make a jump to the next unread message.
-
 Ctrl+down is strange when at the last node.
 
 Improve use of flock.
