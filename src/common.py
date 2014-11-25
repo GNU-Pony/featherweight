@@ -27,8 +27,8 @@ _ = gettext.gettext
 islinux = ('TERM' in os.environ) and (os.environ['TERM'] == 'linux')
 home = os.environ['HOME']
 
-quote = (lambda x : "'%s'" % x) if islinux else (lambda x : '‘%s’' % x)
-double_quote = (lambda x : '"%s"' % x) if islinux else (lambda x : '“%s”' % x)
+quote = (lambda x : _("'%s'") % x) if islinux else (lambda x : _('‘%s’') % x)
+double_quote = (lambda x : _('"%s"') % x) if islinux else (lambda x : _('“%s”') % x)
 abbr = lambda x : ('~%s' % x[len(home):] if x.startswith(home + '/') else x)
 
 
