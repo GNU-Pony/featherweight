@@ -173,7 +173,7 @@ try:
                     if table['Title'] == '':
                         return False
                     values['title'] = table['Title']
-                    values['group'] = None if table['Group'] == '' else table['Group']
+                    values['group'] = table['Group']
                     values['url'] = None if table['URL'] == '' else table['URL']
                     saved = True
                     return True
