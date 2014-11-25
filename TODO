@@ -11,3 +11,5 @@ Improve use of flock.
 
 Backup all files before editing them.
 
+Do not use html2text, it sucks.
+

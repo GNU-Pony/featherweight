@@ -311,7 +311,40 @@ def open_feed(feed_node, recall):
                 print('\033[H\033[2J', end = '', flush = True)
                 tree.draw_force = True
         elif action == 'open':
-            pass # TODO
+            if (node is not None) and ('inner' not in node):
+                description = ''
+                if 'link' in node:
+                    description += '%s<br><br>' % (_('Link: %s') % node['link'])
+                if 'description' in node:
+                    description += node['description']
+                description = description.encode('utf-8')
+                proc = Popen(['html2text'], stdin = PIPE, stdout = PIPE, stderr = sys.stderr)
+                description = proc.communicate(description)[0]
+                pager = os.environ['PAGER'] if 'PAGER' in os.environ else None
+                if pager is None:
+                    path = os.environ['PATH'] if 'PATH' in os.environ else None
+                    if path is not None:
+                        path = path.split(':')
+                        for pg in ['less', 'more', 'most', 'pg']:
+                            for p in path:
+                                if os.access('%s/%s' % (p, pg), os.X_OK):
+                                    pager = pg
+                                    break
+                            if pager is not None:
+                                break
+                if pager is not None:
+                    print('\033[H\033[2J\033[?9l\033[?25h\033[?1049l', end = '', flush = True)
+                    proc = Popen(['sh', '-c', pager], stdin = PIPE, stdout = sys.stdout, stderr = sys.stderr)
+                    proc.communicate(description)
+                    print('\033[?1049h\033[?25l\033[?9h\033[H\033[2J', end = '', flush = True)
+                else:
+                    print('\033[H\033[2J\033[?9l', end = '', flush = True)
+                    sys.stdout.buffer.write(description)
+                    sys.stdout.buffer.flush()
+                    while sys.stdin.read(1)[0] != '\n':
+                        pass
+                    print('\033[?9h\033[H\033[2J', end = '', flush = True)
+                tree.draw_force = True
         elif action == 'add':
             pass # "add", add what?
         elif action == 'delete':
