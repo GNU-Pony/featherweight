@@ -179,6 +179,42 @@ def open_feed(feed_node, recall):
     id = feed_node['id']
     (entries, years, have, unread) = load_feed(id)
     tree = Tree(feed_node['title'], entries)
+    
+    def get_nodes(node, qualifier):
+        nodes = []
+        if (node is not None) and ('inner' not in node):
+            if qualifier(node):
+                nodes.append(node)
+        else:
+            inners = node['inner'] if node is not None else entries
+            for inner in inners:
+                nodes += get_nodes(inner, qualifier)
+        return nodes
+    
+    def read_unread(mod, nodes):
+        guids = [node['guid'] for node in nodes]
+        updated = None
+        def update(f, qualifer):
+            [f(guid) for guid in guids if qualifer(guid)]
+        if mod > 0:
+            updated = update_entires(id, lambda _, unread : update(unread.add, lambda g : g not in unread))
+            [unread.add(guid) for guid in guids if guid not in unread]
+        elif mod < 0:
+            updated = update_entires(id, lambda _, unread : update(unread.remove, lambda g : g in unread))
+            [unread.remove(guid) for guid in guids if guid in unread]
+        else:
+            return
+        tree.count += mod * len(guids)
+        for node in nodes:
+            pubdate = node['pubdate']
+            years[pubdate[0]]['new'] += mod
+            years[pubdate[0]][pubdate[1]]['new'] += mod
+            years[pubdate[0]][pubdate[1]][pubdate[2]]['new'] += mod
+            node['new'] += mod
+        if updated:
+            recall(mod * len(guids))
+        tree.draw_force = True
+    
     while True:
         (action, node) = tree.interact()
         if action == 'quit':
@@ -194,35 +230,7 @@ def open_feed(feed_node, recall):
         elif action == 'delete':
             pass # TODO
         elif action == 'read':
-            if (node is None) or ('inner' in node) or (node['new'] == 0):
-                continue
-            eid = node['id']
-            updated = update_entires(id, lambda _, unread : unread.remove(eid) if eid in unread else None)
-            if eid in unread:
-                unread.remove(eid)
-            pubdate = node['pubdate']
-            tree.count -= 1
-            years[pubdate[0]]['new'] -= 1
-            years[pubdate[0]][pubdate[1]]['new'] -= 1
-            years[pubdate[0]][pubdate[1]][pubdate[2]]['new'] -= 1
-            node['new'] -= 1
-            if updated:
-                recall(-1)
-            tree.draw_force = True
+            read_unread(-1, get_nodes(node, lambda n : n['new'] == 1))
         elif action == 'unread':
-            if (node is None) or ('inner' in node) or (node['new'] >= 1):
-                continue
-            eid = node['id']
-            updated = update_entires(id, lambda _, unread : unread.add(eid) if eid not in unread else None)
-            if eid in unread:
-                unread.add(eid)
-            pubdate = node['pubdate']
-            tree.count += 1
-            years[pubdate[0]]['new'] += 1
-            years[pubdate[0]][pubdate[1]]['new'] += 1
-            years[pubdate[0]][pubdate[1]][pubdate[2]]['new'] += 1
-            node['new'] += 1
-            if updated:
-                recall(+1)
-            tree.draw_force = True
+            read_unread(+1, get_nodes(node, lambda n : n['new'] == 0))
 
