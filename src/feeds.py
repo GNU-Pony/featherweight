@@ -199,6 +199,37 @@ def delete_entry_content(feed_id, guids):
 
 
 
+def modify_entry(feed_id, updates):
+    '''
+    Modify a feed entry
+    
+    @param  feed_in:str                                   The ID of the feed
+    @param  updates:dict<guid:str, values:dict<str, ¿?>>  Mapping from GUID:s, of the messages to update,
+                                                          to mapping for keys to new values
+    '''
+    with touch('%s/%s-content' % (root, feed_id)) as feed_flock:
+        flock(feed_flock, True)
+        feed_content = None
+        try:
+            with open('%s/%s-content' % (root, feed_id), 'rb') as file:
+                feed_content = file.read()
+        except:
+            pass
+        if feed_content is not None:
+            feed_content = feed_content.decode('utf-8', 'strict')
+            feed_content = eval(feed_content) if len(feed_content) > 0 else []
+            for content in feed_content:
+                if content['guid'] in updates:
+                    values = updates[content['guid']]
+                    for key in values.keys():
+                        content[key] = values[key]
+            feed_content = repr(feed_content).encode('utf-8')
+            with open('%s/%s-content' % (root, feed_id), 'wb') as file:
+                file.write(feed_content)
+        unflock(feed_flock)
+
+
+
 def open_feed(feed_node, recall):
     '''
     Inspect a feed
@@ -254,7 +285,31 @@ def open_feed(feed_node, recall):
         elif action == 'back':
             return False
         elif action == 'edit':
-            pass # TODO
+            if (node is not None) and ('inner' not in node):
+                table = {'Title' : node['realtitle'].split('\n')[0]}
+                values = {}
+                saved = False
+                def saver():
+                    nonlocal table, saved, values
+                    values['title'] = table['Title']
+                    saved = True
+                    return True
+                text_area = TextArea(['Title'], table)
+                text_area.initialise(False)
+                print('\033[?25h\033[?9l', end = '', flush = True)
+                text_area.run(saver)
+                print('\033[?9h\033[?25l', end = '', flush = True)
+                text_area.close()
+                gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
+                gettext.textdomain('@PKGNAME@')
+                if saved:
+                    node['realtitle'] = values['title']
+                    pubdate = node['pubdate']
+                    pubdate = '%02i:%02i:%02i' % (pubdate[3], pubdate[4], pubdate[5])
+                    node['title'] = '(%s) %s' % (pubdate, values['title'])
+                    modify_entry(id, {node['guid'] : values})
+                print('\033[H\033[2J', end = '', flush = True)
+                tree.draw_force = True
         elif action == 'open':
             pass # TODO
         elif action == 'add':

@@ -9,3 +9,5 @@ Ctrl+down is strange when at the last node.
 
 Improve use of flock.
 
+Backup all files before editing them.
+

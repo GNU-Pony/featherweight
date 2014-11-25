@@ -73,7 +73,7 @@ def update_node(trees, node_id, values):
     
     @param   trees:itr<dict<str, _|itr<↑>|¿I?>>  The trees
     @param   node_id:¿I?                         The identifier for the node
-    @param   values:dict<str, _>                 The new node values
+    @param   values:dict<str, ¿?|...>            The new node values, mapping to `...` for deletion
     @return  :bool                               Whether the node was found; intended for method internal use
     '''
     for i in range(len(trees)):
