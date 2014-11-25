@@ -58,7 +58,7 @@ def load_feed(id):
     entries = []
     years = {}
     with touch('%s/%s' % (root, id)) as feed_flock:
-        flock(feed_flock, True)
+        flock(feed_flock, False)
         feed_info, feed_data = None, None
         try:
             with open('%s/%s' % (root, id), 'rb') as file:
