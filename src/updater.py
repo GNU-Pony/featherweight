@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
 import os
+import time
 from subprocess import Popen, PIPE
 
 from common import *
@@ -33,6 +34,8 @@ def update_feed(feed, if_group):
     @param  if_group:str?                 The name of the group the feed should belong to
                                           for it to be updated, `None` to update everything
     '''
+    now = time.gmtime()
+    now = [now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec]
     if 'inner' in feed:
         for feed in feed['inner']:
             update_feed(feed, if_group)
@@ -82,6 +85,8 @@ def update_feed(feed, if_group):
                             unread.add(guid)
                             have.add(guid)
                             old_data.append(item)
+                            if 'pubdate' not in item:
+                                item['pubdate'] = now
                 with open('%s/%s-content' % (root, id), 'wb') as file:
                     file.write(repr(old_data).encode('utf-8'))
             except:
