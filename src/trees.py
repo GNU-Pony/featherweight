@@ -448,6 +448,7 @@ class Tree():
                         if backup is not None:
                             self.select_stack[:] = backup
             elif buf.endswith('\033[1;5B'):
+                backup = None
                 while self.select_stack[-1][0] is not None:
                     cur = self.select_stack[-1][0]
                     curi = self.select_stack[-1][1]
@@ -459,8 +460,11 @@ class Tree():
                         self.print_tree()
                         break
                     elif self.select_stack[-2][0] is not None:
+                        backup = self.select_stack[:]
                         self.select_stack.pop()
                     else:
+                        if backup is not None:
+                            self.select_stack[:] = backup
                         break
             elif buf.endswith('\033[C'):
                 if self.select_stack[-1][0] is None:

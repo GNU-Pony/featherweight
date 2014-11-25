@@ -1,7 +1,5 @@
 There are glitches when closing nodes on the tree.
 
-Ctrl+down is strange when at the last node.
-
 Improve use of flock.
 
 Backup all files before editing them.
