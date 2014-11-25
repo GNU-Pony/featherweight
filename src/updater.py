@@ -16,6 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 '''
+import os
 from subprocess import Popen, PIPE
 
 from common import *
@@ -54,12 +55,15 @@ def update_feed(feed, if_group):
             url = feed_info['url']
             
             try:
+                feed_data = None
                 if url.startswith('file://'):
-                    with open(url[len('file://'):], 'rb') as feed_file:
-                        feed_data = feed_file.read().decode('utf-8', 'strict')
+                    url = url[len('file://'):]
+                    if os.access(url, os.R_OK):
+                        with open(url, 'rb') as feed_file:
+                            feed_data = feed_file.read().decode('utf-8', 'strict')
                 else:
                     feed_data = Popen(['wget', url, '-O', '-'], stdout = PIPE).communicate()[0]
-                feed_data = parse_feed(feed_data)
+                feed_data = [] if feed_data is None else parse_feed(feed_data)
                 old_data = []
                 try:
                     with open('%s/%s-content' % (root, id), 'rb') as file:
@@ -68,6 +72,11 @@ def update_feed(feed, if_group):
                     pass
                 for channel in feed_data:
                     for item in channel['items']:
+                        if 'guid' not in item:
+                            if 'link' in item:
+                                item['guid'] = item['link']
+                            else:
+                                item['guid'] = item['title']
                         guid = item['guid']
                         if guid not in have:
                             unread.add(guid)

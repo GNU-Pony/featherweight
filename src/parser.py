@@ -44,6 +44,7 @@ def parse_feed(feed):
             value = value[:-1]
         while '  ' in value:
             value = value.replace('  ', ' ')
+        value = value.replace('UTC', '+0000').replace('GMT', '+0000')
         value = value.replace(':', ' ').split(' ')
         (_, day, month, year, hour, minute, second, offset) = value
         offsign, offhour, offmin = offset[0] == '+', offset[1 : 3], offset[3 : 5]
@@ -90,13 +91,15 @@ def parse_feed(feed):
     
     def atom_date(value):
         value = value.replace(' ', '').replace('\t', '').replace('\n', '').replace('\r', '')
-        value = value.replace('+', 'T+').replace('-', 'T-').replace('Z', 'T+0000')
+        value = value.replace('Z', '+0000').replace('+', 'T+')
+        if '+' not in value:
+            value = '-'.join(value.split('-')[:-1]) + 'T-' + value.split('-')[-1]
         (year, month, day) = value.split('T')[0].split('-')
         (hour, minute, second) = value.split('T')[1].split(':')
-        offset = value.split('T')[2]
+        offset = value.split('T')[2].replace(':', '')
         offsign, offhour, offmin = offset[0] == '+', offset[1 : 3], offset[3 : 5]
         year, month, day = int(year), int(month), int(day)
-        hour, minute, second = int(hour), int(minute), int(second)
+        hour, minute, second = int(hour), int(minute), int(second.split('.')[0])
         offhour, offmin = int(offhour), int(offmin)
         if offsign:
             hour += offhour
