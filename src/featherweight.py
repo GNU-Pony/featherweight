@@ -203,6 +203,8 @@ try:
                     tree.select_stack.pop()
                 print('\033[H\033[2J', end = '', flush = True)
                 tree.draw_force = True
+        elif action in ('up', 'down', 'out', 'in'):
+            pass # TODO reorder
         elif action == 'read':
             if node is not None:
                 pass # we do not have entires, just feeds, nothing to read

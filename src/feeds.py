@@ -347,6 +347,8 @@ def open_feed(feed_node, recall):
                 tree.draw_force = True
         elif action == 'add':
             pass # "add", add what?
+        elif action in ('up', 'down', 'out', 'in'):
+            pass # cannot reorder entries
         elif action == 'delete':
             if node is None:
                 continue

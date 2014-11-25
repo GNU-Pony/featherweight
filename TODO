@@ -1,8 +1,5 @@
 There are glitches when closing nodes on the tree.
 
-Branches with no unread entries should be closed
-when a tree is firsted opened.
-
 'n'-key should make a jump to the next unread message.
 
 Ctrl+down is strange when at the last node.
@@ -12,6 +9,4 @@ Improve use of flock.
 Backup all files before editing them.
 
 Do not use html2text, it sucks.
-
-It should be possible to reorder feeds.
 

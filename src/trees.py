@@ -137,6 +137,14 @@ class Tree():
         self.select_stack = [(None, None)]
         self.collapsed_count = 0
         
+        def autocollapse(feed):
+            if ('new' not in feed) or (feed['new'] == 0):
+                feed['expanded'] = False
+                self.collapsed_count += 1
+                if 'inner' in feed:
+                    [autocollapse(feed) for feed in feed['inner']]
+        [autocollapse(feed) for feed in feeds]
+        
         height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
         (height, width) = height_width.decode('utf-8', 'strict')[:-1].split(' ')
         height, width = int(height), int(width)
@@ -482,6 +490,10 @@ class Tree():
             elif buf.endswith('D'):   return ('delete', self.select_stack[-1][0])
             elif buf.endswith('r'):   return ('read',   self.select_stack[-1][0])
             elif buf.endswith('R'):   return ('unread', self.select_stack[-1][0])
+            elif buf.endswith('u'):   return ('up',     self.select_stack[-1][0])
+            elif buf.endswith('j'):   return ('down',   self.select_stack[-1][0])
+            elif buf.endswith('U'):   return ('out',    self.select_stack[-1][0])
+            elif buf.endswith('J'):   return ('in',     self.select_stack[-1][0])
             elif buf.endswith('\t'):  return ('back',   None)
             elif buf.endswith('\n'):  return ('open',   self.select_stack[-1][0])
             elif (buf[-3] != '\033' or buf[-2] != '[') and (buf[-5] != '\033' or buf[-4] != '[' or buf[-2] != ';') and (ord('0') <= ord(buf[-1]) <= ord('9')):
