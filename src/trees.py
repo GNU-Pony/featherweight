@@ -168,6 +168,7 @@ class Tree():
         self.draw_force = True
         self.draw_line = 0
         self.last_select = None
+        self.redraw_root = False
     
     
     @staticmethod
@@ -285,8 +286,9 @@ class Tree():
         title = self.root
         if len(self.select_stack) == 1:
             title = '\033[01;34m%s\033[00m' % title
-        if self.lineoff <= self.curline < self.lineoff + height:
-            if self.draw_force or ((self.last_select is not None) == (self.select_stack[-1][0] is None)):
+        root, self.redraw_root = self.redraw_root, False
+        if root or self.lineoff <= self.curline < self.lineoff + height:
+            if root or self.draw_force or ((self.last_select is not None) == (self.select_stack[-1][0] is None)):
                 if self.count > 0:
                     print('\033[01;31m(%i)\033[00m ' % self.count, end = '')
                 print(title, end = '')
@@ -360,8 +362,7 @@ class Tree():
                                     self.select_stack.append((self.feeds[0], 0))
                                     tline += 1
                             else:
-                                cur = self.select_stack[-1][0]
-                                curi = self.select_stack[-1][1]
+                                (cur, curi) = self.select_stack[-1]
                                 if ('inner' in cur) and Tree.is_expanded(cur):
                                     self.select_stack.append((cur['inner'][0], 0))
                                     tline += 1
@@ -375,8 +376,7 @@ class Tree():
                                             self.select_stack.append((par[curi + 1], curi + 1))
                                             has_next = True
                                             break
-                                        cur = self.select_stack[-1][0]
-                                        curi = self.select_stack[-1][1]
+                                        (cur, curi) = self.select_stack[-1]
                                     if not has_next:
                                         break
                                     else:
@@ -387,18 +387,14 @@ class Tree():
                         backup = None
                     if backup is None:
                         if self.select_stack[-1][0] is last:
-                            if (last is None) or ('inner' in last):
-                                queued += ' '
-                            else:
-                                queued += '\n'
+                            queued += ' ' if (last is None) or ('inner' in last) else '\n'
                         else:
                             self.print_tree()
                     else:
                         self.select_stack[:] = backup
             elif buf.endswith('\033[A'):
                 if self.select_stack[-1][0] is not None:
-                    cur = self.select_stack[-1][0]
-                    curi = self.select_stack[-1][1]
+                    (cur, curi) = self.select_stack[-1]
                     self.select_stack.pop()
                     if curi > 0:
                         par = self.select_stack[-1][0]
@@ -413,8 +409,7 @@ class Tree():
                     self.print_tree()
             elif buf.endswith('\033[1;5A'):
                 if self.select_stack[-1][0] is not None:
-                    cur = self.select_stack[-1][0]
-                    curi = self.select_stack[-1][1]
+                    (cur, curi) = self.select_stack[-1]
                     self.select_stack.pop()
                     if curi > 0:
                         par = self.select_stack[-1][0]
@@ -427,8 +422,7 @@ class Tree():
                         self.select_stack.append((self.feeds[0], 0))
                         self.print_tree()
                 else:
-                    cur = self.select_stack[-1][0]
-                    curi = self.select_stack[-1][1]
+                    (cur, curi) = self.select_stack[-1]
                     if ('inner' in cur) and Tree.is_expanded(cur):
                         self.select_stack.append((cur['inner'][0], 0))
                         self.print_tree()
@@ -443,15 +437,13 @@ class Tree():
                                 backup = None
                                 self.print_tree()
                                 break
-                            cur = self.select_stack[-1][0]
-                            curi = self.select_stack[-1][1]
+                            (cur, curi) = self.select_stack[-1]
                         if backup is not None:
                             self.select_stack[:] = backup
             elif buf.endswith('\033[1;5B'):
                 backup = None
                 while self.select_stack[-1][0] is not None:
-                    cur = self.select_stack[-1][0]
-                    curi = self.select_stack[-1][1]
+                    (cur, curi) = self.select_stack[-1]
                     par = self.select_stack[-2][0]
                     par = self.feeds if par is None else par['inner']
                     if curi + 1 < len(par):
@@ -472,8 +464,7 @@ class Tree():
                         self.select_stack.append((self.feeds[0], 0))
                         self.print_tree()
                 else:
-                    cur = self.select_stack[-1][0]
-                    curi = self.select_stack[-1][1]
+                    (cur, curi) = self.select_stack[-1]
                     if 'inner' in cur:
                         if not Tree.is_expanded(cur):
                             cur['expanded'] = True
@@ -540,8 +531,7 @@ class Tree():
                                     self.select_stack.append((par[curi + 1], curi + 1))
                                     restart = False
                                     break
-                                cur = self.select_stack[-1][0]
-                                curi = self.select_stack[-1][1]
+                                (cur, curi) = self.select_stack[-1]
                             if restart:
                                 self.select_stack[:] = self.select_stack[:1]
                                 continue

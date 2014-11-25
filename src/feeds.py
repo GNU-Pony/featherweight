@@ -270,13 +270,16 @@ def open_feed(feed_node, recall):
         tree.count += mod * len(guids)
         for node in nodes:
             pubdate = node['pubdate']
-            years[pubdate[0]]['new'] += mod
-            years[pubdate[0]][pubdate[1]]['new'] += mod
-            years[pubdate[0]][pubdate[1]][pubdate[2]]['new'] += mod
-            node['new'] += mod
+            ancestors = [years[pubdate[0]]]
+            while len(ancestors) < 3:
+                ancestors.append(ancestors[-1][pubdate[len(ancestors)]])
+            ancestors.append(node)
+            for node in ancestors:
+                node['new'] += mod
+                node['draw_line'] = -1
+            tree.redraw_root = True
         if updated:
             recall(mod * len(guids))
-        tree.draw_force = True
     
     while True:
         (action, node) = tree.interact()
