@@ -42,7 +42,7 @@ if not os.path.exists(root):
 
 feeds = None
 with touch('%s/feeds' % root) as feeds_flock:
-    flock(feeds_flock, False)
+    flock(feeds_flock, update)
     with open('%s/feeds' % root, 'rb') as file:
         feeds = file.read().decode('utf-8', 'strict')
     feeds = [] if len(feeds) == 0 else eval(feeds)
@@ -58,18 +58,27 @@ with touch('%s/feeds' % root) as feeds_flock:
             updated = repr(feeds)
             with open('%s/feeds' % root, 'wb') as file:
                 file.write(updated.encode('utf-8'))
+            with open('%s/status' % root, 'wb') as file:
+                file.write(('%i\n' % Tree.count_new(feeds)).encode('utf-8'))
         if status:
-            def get_status(feeds, in_group):
-                global group
-                count = 0
-                for feed in feeds:
-                    inside = in_group or (feed['group'] == group)
-                    if 'inner' in feed:
-                        count += get_status(feed['inner'], inside)
-                    elif inside:
-                        count += feed['new']
-                return count
-            print(get_status(feeds, group is None))
+            if group is not None:
+                def get_status(feeds, in_group):
+                    global group
+                    count = 0
+                    for feed in feeds:
+                        inside = in_group or (feed['group'] == group)
+                        if 'inner' in feed:
+                            count += get_status(feed['inner'], inside)
+                        elif inside:
+                            count += feed['new']
+                    return count
+                print(get_status(feeds, False))
+            elif not os.access('%s/status' % root, os.F_OK):
+                print('0')
+            else:
+                with open('%s/status' % root, 'rb') as file:
+                    sys.stdout.buffer.write(file.read())
+                sys.stdout.buffer.flush()
     unflock(feeds_flock)
 
 
@@ -103,11 +112,13 @@ def update_feeds(function):
             _feeds = _feeds.decode('utf-8', 'strict')
         _feeds = [] if len(_feeds) == 0 else eval(_feeds)
         function(_feeds)
-        Tree.count_new(_feeds)
+        status = Tree.count_new(_feeds)
         _feeds = repr(_feeds)
         try:
             with open('%s/feeds' % root, 'wb') as file:
                 file.write(_feeds.encode('utf-8'))
+            with open('%s/status' % root, 'wb') as file:
+                file.write(('%i\n' % status).encode('utf-8'))
         except Exception as err:
             Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
             print('\n\033[?9l\033[?25h\033[?1049l', end = '', flush = True)
