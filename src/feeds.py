@@ -99,6 +99,7 @@ def load_feed(id):
                         month_entry = {}
                         months[pubdate[1]] = month_entry
                         months['inner'].append(month_entry)
+                        month_entry['year'] = pubdate[0]
                         month_entry['month'] = pubdate[1]
                         month_entry['title'] = MONTHS[pubdate[1]] if pubdate[1] in MONTHS else str(pubdate[1])
                         month_entry['inner'] = []
@@ -109,6 +110,8 @@ def load_feed(id):
                         day_entry = {}
                         days[pubdate[2]] = day_entry
                         days['inner'].append(day_entry)
+                        day_entry['year'] = pubdate[0]
+                        day_entry['month'] = pubdate[1]
                         day_entry['day'] = pubdate[2]
                         title =  MONTHS[pubdate[1]][:3] if pubdate[1] in MONTHS else ''
                         title = '%03i-(%02i)%s-%02i' % (pubdate[0], pubdate[1], title, pubdate[2])
@@ -116,8 +119,7 @@ def load_feed(id):
                         day_entry['inner'] = []
                         day_entry['id'] = next_id
                         next_id += 1
-                    entires_of_the_day = days[pubdate[2]]['inner']
-                    entires_of_the_day.append(entry)
+                    days[pubdate[2]]['inner'].append(entry)
         except:
             pass
     
@@ -133,7 +135,7 @@ def load_feed(id):
 
 
 
-def update_entires(feed_id, function):
+def update_entries(feed_id, function):
     '''
     Update the entries in a feed
     
@@ -167,6 +169,36 @@ def update_entires(feed_id, function):
 
 
 
+def delete_entry_content(feed_id, guids):
+    '''
+    Delete entries from the content list of a feed
+    
+    @param  feed_in:str     The ID of the feed
+    @param  guids:set<str>  The GUID:s of the messages to delete
+    '''
+    with touch('%s/%s-content' % (root, feed_id)) as feed_flock:
+        flock(feed_flock, True)
+        feed_content = None
+        try:
+            with open('%s/%s-content' % (root, feed_id), 'rb') as file:
+                feed_content = file.read()
+        except:
+            pass
+        if feed_content is not None:
+            feed_content = feed_content.decode('utf-8', 'strict')
+            feed_content = eval(feed_content) if len(feed_content) > 0 else []
+            i = len(feed_content)
+            while i > 0:
+                i -= 1
+                if feed_content[i]['guid'] in guids:
+                    del feed_content[i]
+            feed_content = repr(feed_content).encode('utf-8')
+            with open('%s/%s-content' % (root, feed_id), 'wb') as file:
+                file.write(feed_content)
+        unflock(feed_flock)
+
+
+
 def open_feed(feed_node, recall):
     '''
     Inspect a feed
@@ -197,10 +229,10 @@ def open_feed(feed_node, recall):
         def update(f, qualifer):
             [f(guid) for guid in guids if qualifer(guid)]
         if mod > 0:
-            updated = update_entires(id, lambda _, unread : update(unread.add, lambda g : g not in unread))
+            updated = update_entries(id, lambda _, unread : update(unread.add, lambda g : g not in unread))
             [unread.add(guid) for guid in guids if guid not in unread]
         elif mod < 0:
-            updated = update_entires(id, lambda _, unread : update(unread.remove, lambda g : g in unread))
+            updated = update_entries(id, lambda _, unread : update(unread.remove, lambda g : g in unread))
             [unread.remove(guid) for guid in guids if guid in unread]
         else:
             return
@@ -228,7 +260,35 @@ def open_feed(feed_node, recall):
         elif action == 'add':
             pass # "add", add what?
         elif action == 'delete':
-            pass # TODO
+            if node is None:
+                continue
+            Popen(['stty', 'echo', 'icanon'], stdout = PIPE, stderr = PIPE).communicate()
+            print('\033[H\033[2J\033[?25h\033[?9l%s' % (_('Are you sure you to delete %s?') % double_quote(node['title'])))
+            print(_('Type %s, if you are sure.') % quote(_('yes')))
+            delete = sys.stdin.readline().replace('\n', '') == _('yes')
+            Popen(['stty', '-echo', '-icanon'], stdout = PIPE, stderr = PIPE).communicate()
+            print('\033[?25l\033[?9h', end = '', flush = True)
+            print('\033[H\033[2J', end = '', flush = True)
+            tree.draw_force = True
+            if not delete:
+                continue
+            read_unread(-1, get_nodes(node, lambda n : n['new'] == 1))
+            guids = [n['guid'] for n in get_nodes(node, lambda _ : True)]
+            delete_entry_content(id, set(guids))
+            def delete_node(nodes, node_id):
+                for i in range(len(nodes)):
+                    if nodes[i]['id'] == node_id:
+                        del nodes[i]
+                        tree.select_stack.pop()
+                        return True
+                    elif 'inner' in nodes[i]:
+                        if delete_node(nodes[i]['inner'], node_id):
+                            if len(nodes[i]['inner']) == 0:
+                                del nodes[i]
+                                tree.select_stack.pop()
+                            return True
+                return False
+            delete_node(entries, node['id'])
         elif action == 'read':
             read_unread(-1, get_nodes(node, lambda n : n['new'] == 1))
         elif action == 'unread':

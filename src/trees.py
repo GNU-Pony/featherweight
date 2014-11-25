@@ -479,7 +479,7 @@ class Tree():
             elif buf.endswith('q'):   return ('quit',   None)
             elif buf.endswith('e'):   return ('edit',   self.select_stack[-1][0])
             elif buf.endswith('+'):   return ('add',    self.select_stack[-1][0])
-            elif buf.endswith('d'):   return ('delete', self.select_stack[-1][0])
+            elif buf.endswith('D'):   return ('delete', self.select_stack[-1][0])
             elif buf.endswith('r'):   return ('read',   self.select_stack[-1][0])
             elif buf.endswith('R'):   return ('unread', self.select_stack[-1][0])
             elif buf.endswith('\t'):  return ('back',   None)
