@@ -21,6 +21,19 @@ import sys
 from subprocess import Popen, PIPE
 
 
+ACTION_MAP = {'e' : 'edit',
+              '+' : 'add',
+              'd' : 'delete',
+              'r' : 'read',
+              'R' : 'unread',
+              'u' : 'up',
+              'j' : 'down',
+              'U' : 'out',
+              'J' : 'in',
+              '\n' : 'open',
+              '\t' : 'back',
+              'q' : 'quit'}
+
 
 def remove_node(trees, node_id):
     '''
@@ -553,18 +566,8 @@ class Tree():
                         self.collapsed_count -= 1
                         self.draw_force = True
                 self.print_tree()
-            elif buf.endswith('q'):   return ('quit',   None)
-            elif buf.endswith('e'):   return ('edit',   self.select_stack[-1][0])
-            elif buf.endswith('+'):   return ('add',    self.select_stack[-1][0])
-            elif buf.endswith('d'):   return ('delete', self.select_stack[-1][0])
-            elif buf.endswith('r'):   return ('read',   self.select_stack[-1][0])
-            elif buf.endswith('R'):   return ('unread', self.select_stack[-1][0])
-            elif buf.endswith('u'):   return ('up',     self.select_stack[-1][0])
-            elif buf.endswith('j'):   return ('down',   self.select_stack[-1][0])
-            elif buf.endswith('U'):   return ('out',    self.select_stack[-1][0])
-            elif buf.endswith('J'):   return ('in',     self.select_stack[-1][0])
-            elif buf.endswith('\t'):  return ('back',   None)
-            elif buf.endswith('\n'):  return ('open',   self.select_stack[-1][0])
+            elif buf[-1] in ACTION_MAP:
+                return (ACTION_MAP[buf[-1]], self.select_stack[-1][0])
             elif (buf[-3] != '\033' or buf[-2] != '[') and (buf[-5] != '\033' or buf[-4] != '[' or buf[-2] != ';') and (ord('0') <= ord(buf[-1]) <= ord('9')):
                 return (buf[-1], self.select_stack[-1][0])
 
