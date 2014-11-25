@@ -2,7 +2,7 @@ There are glitches when closing nodes on the tree.
 
 Improve use of flock.
 
-Backup all files before editing them.
+Back up all files before editing them.
 
 Do not use html2text, it sucks.
 
