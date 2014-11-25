@@ -6,3 +6,35 @@ and be browsed in your terminal. Due to it running as a cron job you are
 able to display the number of new news in your shell prompt line (PS1)
 and not have an application constantly open in the background.
 
+
+
+Navigation:
+
+	e		Edit the marked node
+	+		Add a new node inside the marked node
+	d		Delete the marked node
+	r		Mark the marked node as read
+	R		Mark the marked node as not read
+	u		Move the marked node up one step
+	j		Move the marked node down one step
+	U		Move the marked node to the position of its parent
+	J		Move the marked node to the first position inside the node below it
+	return		Open the marked node
+	tab		Return the feed tree
+	q		Quit
+	up		Go to the node printed directly above the marked node
+	down		Go to the node printed directly below the marked node
+	C-up		Go to the previous node with the same parent, or the parent if at the first one
+	C-down		Go to the next node with the same parent, or the line printed below it if at the last one
+	C-left		Go to the root
+	left		Go to the parent of the marked node
+	right		Go to the first of the marked node, expand if necessary
+	space		Collapse or expand the marked node, all nodes if at the root
+	C-l		Redraw the screen
+	n		Go to the next unread leaf node
+	P		Go to the next unread leaf node
+	N		Go to the previous unread leaf node
+	p		Go to the previous unread leaf node
+	
+	the mouse works in xterm-compatible terminals, double click to open a node.
+
