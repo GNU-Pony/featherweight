@@ -53,6 +53,7 @@ Texts. A copy of the license is included in the section entitled
 @menu
 * Overview::                        Brief overview of @command{featherweight}.
 * Invoking::                        Invocation of @command{featherweight}.
+* Environment::                     Environment variables used by @command{featherweight}.
 * GNU Free Documentation License::  Copying and sharing this manual.
 @end menu
 
@@ -119,6 +120,52 @@ but that appears to be have as fast as to long version.
 
 @command{featherweight --update} can be used to fetch the
 latest news and then open the news reader.
+
+
+
+@node Environment
+@chapter Environment
+
+@command{featherweight} recongises four environment variables:
+
+@table @env
+@item HOME
+Your home directory, @file{/.var/lib/featherweight} is appended
+to this which makes the directory where information stored by
+@command{featherweight} is located. This environment variable
+is mandatory and is set up by your login program.
+
+@item TERM
+This environment variable is optional, but is set up by your
+terminal. If and only if its value is `linux', @command{featherweight}
+assumes that your are in the Linux VT and will only characters
+supported in the Linux VT, and any character found in the feeds
+or that is set by the user herself.
+
+@item PAGER
+This environment variable is optional. If it is set it is used
+when reading news. If is parsed by @command{sh}, thus it must
+be formatted as you when you use it in a POSIX-compliant, this
+means that is can contain spaces, quote, @file{~} and such,
+and can consists of multiple arguments. The command must read
+the displayed content from standard input (@file{/dev/stdin}).
+If this variable is not set, or if it is empty,
+@command{featherweight} will use @command{less} or if not
+available in @env{PATH}, the first of @command{more},
+@command{most} and @command{pg}, that is. In the unlikely
+event that no pagers is found, @command{featherweight} will
+act as a dumb pager.
+
+@item PATH
+This environment variable is used when @env{PAGER} is not set
+(or is empty) to located to fallback pager. It is also used
+to find other programs used by @command{featherweight} and
+perhaps to by does programs to find other programs.
+@end table
+
+If you want to use a proxy, you use set your environment
+variables so that @command{wget} does that.
+@inforef{Proxies,, wget}.
 
 
 @node GNU Free Documentation License
