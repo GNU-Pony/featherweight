@@ -143,7 +143,7 @@ def load_feed(id):
                             else:
                                 ancestor['colour'] = mode_c
                 else:
-                    for ancestor in reversed(ancestors):
+                    for ancestor in ancestors:
                         if 'colours' in ancestor:
                             ancestor['colours'][...] += 1
     
