@@ -214,14 +214,38 @@ try:
                     tree.select_stack.pop()
                 print('\033[H\033[2J', end = '', flush = True)
                 tree.draw_force = True
-        elif action in ('up', 'down', 'out', 'in'):
+        elif action in ('up', 'down'):
+            if node is None:
+                continue
+            parent = tree.select_stack[-2][0]
+            id_p = None if parent is None else parent['id']
+            parent = feeds if parent is None else parent['inner']
+            nodei = tree.select_stack[-1][1]
+            nodej = nodei + (-1 if action == 'up' else +1)
+            if (nodei == 0) if action == 'up' else (nodei + 1 == len(parent)):
+                continue
+            id_i, id_j = parent[nodei]['id'], parent[nodej]['id']
+            parent[nodei]['draw_line'] = -1
+            parent[nodej]['draw_line'] = -1
+            def save(t, id_t = None):
+                if id_p == id_t:
+                    i_is = [i for i in range(len(t)) if t[i]['id'] == id_i]
+                    j_is = [i for i in range(len(t)) if t[i]['id'] == id_j]
+                    if (i_is == [nodei]) and (j_is == [nodej]):
+                        t[nodei], t[nodej] = t[nodej], t[nodei]
+                    return True
+                else:
+                    for child in t:
+                        if 'inner' in child:
+                            if save(child['inner'], child['id']):
+                                return True
+                return False
+            update_feeds(save)
+            tree.select_stack[-1] = (parent[nodej], nodej)
+        elif action in ('out', 'in'):
             pass # TODO reorder
-        elif action == 'read':
-            if node is not None:
-                pass # we do not have entires, just feeds, nothing to read
-        elif action == 'unread':
-            if node is not None:
-                pass # we do not have entires, just feeds, nothing to unread
+        elif action in ('read', 'unread'):
+            pass # we do not have entires, just feeds, nothing to read/unread
         elif action == 'back':
             pass # we are at the first page
 
