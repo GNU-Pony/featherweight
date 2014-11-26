@@ -26,19 +26,21 @@ from parser import *
 
 
 
-def update_feed(feed, if_group):
+def update_feed(feed, if_group, now = None):
     '''
     Update a feed and its subfeeds
     
     @param  feed:dict<str, _|int|itr<↑>>  The feed
     @param  if_group:str?                 The name of the group the feed should belong to
                                           for it to be updated, `None` to update everything
+    @param  now:tuple(int)                The current time, intended for internal use
     '''
-    now = time.gmtime()
-    now = [now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec]
+    if now is None:
+        now = time.gmtime()
+        now = [now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec]
     if 'inner' in feed:
         for feed in feed['inner']:
-            update_feed(feed, if_group)
+            update_feed(feed, if_group, now)
     elif ((if_group is None) or (feed['group'] == if_group)) and ('url' in feed) and (feed['url'] is not None):
         id = feed['id']
         with touch('%s/%s' % (root, id)) as feed_flock:

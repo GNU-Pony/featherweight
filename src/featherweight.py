@@ -40,11 +40,27 @@ system = '--system' in args
 if not os.path.exists(root):
     os.makedirs(root)
 
+
+def flatten(feeds, rc = None):
+    if rc is None:
+        rc = []
+        flatten(feeds, rc)
+        return rc
+    else:
+        for feed in feeds:
+            rc.append(feed)
+            if 'inner' in feed:
+                flatten(feed['inner'], rc)
+        
+
+
 feeds = None
 with touch('%s/feeds' % root) as feeds_flock:
     flock(feeds_flock, False, _('Feed database is locked by another process, waiting...'))
     with open('%s/feeds' % root, 'rb') as file:
-        feeds = file.read().decode('utf-8', 'strict')
+        feeds = file.read()
+    unflock(feeds_flock)
+    feeds = feeds.decode('utf-8', 'strict')
     feeds = [] if len(feeds) == 0 else eval(feeds)
     if update or status:
         group = None
@@ -53,14 +69,27 @@ with touch('%s/feeds' % root) as feeds_flock:
                 group = arg
                 break
         if update:
+            old = dict((feed['id'], feed['new']) for feed in flatten(feeds))
             for feed in feeds:
                 update_feed(feed, group)
-            updated = repr(feeds)
             flock(feeds_flock, True, _('Feed database is locked by another process, waiting...'))
+            new = [(feed['id'], feed['new']) for feed in flatten(feeds)]
+            with open('%s/feeds' % root, 'rb') as file:
+                feeds = file.read()
+            feeds = feeds.decode('utf-8', 'strict')
+            feeds = [] if len(feeds) == 0 else eval(feeds)
+            flat_feeds = dict((feed['id'], feed) for feed in flatten(feeds))
+            for id, new_value in new:
+                if id in flat_feeds.keys():
+                    feed['new'] += new_value - old[id]
+            updated = repr(feeds)
+            data = updated.encode('utf-8')
+            status_data = ('%i\n' % Tree.count_new(feeds)).encode('utf-8')
             with open('%s/feeds' % root, 'wb') as file:
-                file.write(updated.encode('utf-8'))
+                file.write(data)
             with open('%s/status' % root, 'wb') as file:
-                file.write(('%i\n' % Tree.count_new(feeds)).encode('utf-8'))
+                file.write(status_data)
+            unflock(feeds_flock)
         if status:
             if group is not None:
                 def get_status(feeds, in_group):
@@ -77,10 +106,11 @@ with touch('%s/feeds' % root) as feeds_flock:
             elif not os.access('%s/status' % root, os.F_OK):
                 print('0')
             else:
+                flock(feeds_flock, False)
                 with open('%s/status' % root, 'rb') as file:
                     sys.stdout.buffer.write(file.read())
                 sys.stdout.buffer.flush()
-    unflock(feeds_flock)
+                unflock(feeds_flock)
 
 
 if system:
