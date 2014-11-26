@@ -247,6 +247,8 @@ class Tree():
                 print('\033[2K', end = prefix + title)
                 feed['draw_line'] = self.draw_line
             self.draw_line += 1
+        else:
+            feed['draw_line'] = -1
         self.curline += 1
         if self.line >= 0:
             self.line += 1
