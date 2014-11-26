@@ -32,7 +32,9 @@ ACTION_MAP = {'e' : 'edit',
               'J' : 'in',
               '\n' : 'open',
               '\t' : 'back',
-              'q' : 'quit'}
+              'q' : 'quit',
+              '0' : '0', '1' : '1', '2' : '2', '3' : '3', '4' : '4',
+              '5' : '5', '6' : '6', '7' : '7', '8' : '8', '9' : '9'}
 
 
 def remove_node(trees, node_id):
@@ -238,7 +240,12 @@ class Tree():
         if prefixlen + len(title) > width:
             if width - prefixlen - 3 >= 0:
                 title = title[: width - prefixlen - 3] + '...'
-        if self.select_stack[-1][0] is feed:
+        if 'colour' in feed:
+            if self.select_stack[-1][0] is feed:
+                title = '\033[01;3%im%s\033[00m' % (feed['colour'], title)
+            else:
+                title = '\033[3%im%s\033[00m' % (feed['colour'], title)
+        elif self.select_stack[-1][0] is feed:
             title = '\033[01;34m%s\033[00m' % title
         if self.lineoff <= self.curline < self.lineoff + height:
             if self.curline > self.lineoff:

@@ -386,4 +386,9 @@ def open_feed(feed_node, recall):
             read_unread(-1, get_nodes(node, lambda n : n['new'] == 1))
         elif action == 'unread':
             read_unread(+1, get_nodes(node, lambda n : n['new'] == 0))
+        elif action in '012345678':
+            if node is None:
+                continue
+            action = ... if action == '0' else (int(action) % 8)
+            pass # TODO
 

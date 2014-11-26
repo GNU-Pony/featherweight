@@ -304,10 +304,17 @@ try:
             tree.select_stack.append((parent[nodei], nodei))
             tree.select_stack.append((parent[nodei]['inner'][0], 0))
             tree.draw_force = True
+            node['draw_line'] = -1
         elif action in ('read', 'unread'):
             pass # we do not have entires, just feeds, nothing to read/unread
         elif action == 'back':
             pass # we are at the first page
+        elif action in '012345678':
+            if node is None:
+                continue
+            action = ... if action == '0' else (int(action) % 8)
+            update_feeds(lambda t : update_node(t, node['id'], {'colour' : action}))
+            node['draw_line'] = -1
 
 except Exception as err:
     raise err
