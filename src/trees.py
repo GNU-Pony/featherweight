@@ -291,6 +291,7 @@ class Tree():
         root, self.redraw_root = self.redraw_root, False
         if root or self.lineoff <= self.curline < self.lineoff + height:
             if root or self.draw_force or ((self.last_select is not None) == (self.select_stack[-1][0] is None)):
+                print('\033[K', end = '')
                 if self.count > 0:
                     print('\033[01;31m(%i)\033[00m ' % self.count, end = '')
                 print(title, end = '')
