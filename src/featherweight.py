@@ -42,7 +42,7 @@ if not os.path.exists(root):
 
 feeds = None
 with touch('%s/feeds' % root) as feeds_flock:
-    flock(feeds_flock, update, _('Feed database is locked by another process, waiting...'))
+    flock(feeds_flock, False, _('Feed database is locked by another process, waiting...'))
     with open('%s/feeds' % root, 'rb') as file:
         feeds = file.read().decode('utf-8', 'strict')
     feeds = [] if len(feeds) == 0 else eval(feeds)
@@ -56,6 +56,7 @@ with touch('%s/feeds' % root) as feeds_flock:
             for feed in feeds:
                 update_feed(feed, group)
             updated = repr(feeds)
+            flock(feeds_flock, True, _('Feed database is locked by another process, waiting...'))
             with open('%s/feeds' % root, 'wb') as file:
                 file.write(updated.encode('utf-8'))
             with open('%s/status' % root, 'wb') as file:
