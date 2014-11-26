@@ -57,6 +57,7 @@ def load_feed(id):
     next_id = 0
     entries = []
     years = {}
+    have, unread = set(), set()
     with touch('%s/%s' % (root, id)) as feed_flock:
         flock(feed_flock, False)
         feed_info, feed_data = None, None
@@ -69,59 +70,82 @@ def load_feed(id):
             except:
                 pass
             unflock(feed_flock)
-            
-            feed_info = feed_info.decode('utf-8', 'strict')
-            feed_info = eval(feed_info) if len(feed_info) > 0 else {}
-            have   = set() if 'have'   not in feed_info else feed_info['have']
-            unread = set() if 'unread' not in feed_info else feed_info['unread']
-            
-            if feed_data is not None:
-                feed_data = eval(feed_data.decode('utf-8', 'strict'))
-                for entry in feed_data:
-                    entry['new'] = 1 if entry['guid'] in unread else 0
-                    pubdate = entry['pubdate']
-                    entry['id'] = entry['guid']
-                    entry['realtitle'] = entry['title']
-                    title = entry['title'].split('\n')[0]
-                    entry['title'] = '(%02i:%02i:%02i) %s' % (pubdate[3], pubdate[4], pubdate[5], title)
-                    entry['time'] = (pubdate[3] * 60 + pubdate[4]) * 100 + pubdate[5]
-                    if pubdate[0] not in years:
-                        year_entry = {}
-                        years[pubdate[0]] = year_entry
-                        entries.append(year_entry)
-                        year_entry['year'] = pubdate[0]
-                        year_entry['title'] = _('Year %i') % pubdate[0]
-                        year_entry['inner'] = []
-                        year_entry['id'] = next_id
-                        next_id += 1
-                    months = years[pubdate[0]]
-                    if pubdate[1] not in months:
-                        month_entry = {}
-                        months[pubdate[1]] = month_entry
-                        months['inner'].append(month_entry)
-                        month_entry['year'] = pubdate[0]
-                        month_entry['month'] = pubdate[1]
-                        month_entry['title'] = MONTHS[pubdate[1]] if pubdate[1] in MONTHS else str(pubdate[1])
-                        month_entry['inner'] = []
-                        month_entry['id'] = next_id
-                        next_id += 1
-                    days = months[pubdate[1]]
-                    if pubdate[2] not in days:
-                        day_entry = {}
-                        days[pubdate[2]] = day_entry
-                        days['inner'].append(day_entry)
-                        day_entry['year'] = pubdate[0]
-                        day_entry['month'] = pubdate[1]
-                        day_entry['day'] = pubdate[2]
-                        title =  MONTHS[pubdate[1]][:3] if pubdate[1] in MONTHS else ''
-                        title = '%03i-(%02i)%s-%02i' % (pubdate[0], pubdate[1], title, pubdate[2])
-                        day_entry['title'] = title
-                        day_entry['inner'] = []
-                        day_entry['id'] = next_id
-                        next_id += 1
-                    days[pubdate[2]]['inner'].append(entry)
         except:
-            pass
+            return
+        
+        feed_info = feed_info.decode('utf-8', 'strict')
+        feed_info = eval(feed_info) if len(feed_info) > 0 else {}
+        have   = set() if 'have'   not in feed_info else feed_info['have']
+        unread = set() if 'unread' not in feed_info else feed_info['unread']
+        
+        if feed_data is not None:
+            feed_data = eval(feed_data.decode('utf-8', 'strict'))
+            for entry in feed_data:
+                entry['new'] = 1 if entry['guid'] in unread else 0
+                pubdate = entry['pubdate']
+                entry['id'] = entry['guid']
+                entry['realtitle'] = entry['title']
+                title = entry['title'].split('\n')[0]
+                entry['title'] = '(%02i:%02i:%02i) %s' % (pubdate[3], pubdate[4], pubdate[5], title)
+                entry['time'] = (pubdate[3] * 60 + pubdate[4]) * 100 + pubdate[5]
+                colour = entry['colour'] if 'colour' in entry else ...
+                if pubdate[0] not in years:
+                    year_entry = {}
+                    years[pubdate[0]] = year_entry
+                    entries.append(year_entry)
+                    year_entry['year'] = pubdate[0]
+                    year_entry['title'] = _('Year %i') % pubdate[0]
+                    year_entry['inner'] = []
+                    year_entry['id'] = next_id
+                    next_id += 1
+                months = years[pubdate[0]]
+                if pubdate[1] not in months:
+                    month_entry = {}
+                    months[pubdate[1]] = month_entry
+                    months['inner'].append(month_entry)
+                    month_entry['year'] = pubdate[0]
+                    month_entry['month'] = pubdate[1]
+                    month_entry['title'] = MONTHS[pubdate[1]] if pubdate[1] in MONTHS else str(pubdate[1])
+                    month_entry['inner'] = []
+                    month_entry['id'] = next_id
+                    next_id += 1
+                days = months[pubdate[1]]
+                if pubdate[2] not in days:
+                    day_entry = {}
+                    days[pubdate[2]] = day_entry
+                    days['inner'].append(day_entry)
+                    day_entry['year'] = pubdate[0]
+                    day_entry['month'] = pubdate[1]
+                    day_entry['day'] = pubdate[2]
+                    title =  MONTHS[pubdate[1]][:3] if pubdate[1] in MONTHS else ''
+                    title = '%03i-(%02i)%s-%02i' % (pubdate[0], pubdate[1], title, pubdate[2])
+                    day_entry['title'] = title
+                    day_entry['inner'] = []
+                    day_entry['id'] = next_id
+                    next_id += 1
+                days[pubdate[2]]['inner'].append(entry)
+                ancestors = [year_entry, month_entry, day_entry]
+                if not colour == ...:
+                    for ancestor in reversed(ancestors):
+                        if 'colours' not in ancestor:
+                            ancestor['colours'] = dict((c, 0) for c in list(range(8)))
+                            ancestor['colours'][...] = len(ancestor['inner']) - 1
+                        old_ancestor_colour = ancestor['colour'] if 'colour' in ancestor else ...
+                        ancestor['colours'][colour] += 1
+                        mode_c, mode_f = ..., 0
+                        for c in range(8):
+                            if mode_f < ancestor['colours'][c]:
+                                mode_f = ancestor['colours'][c]
+                                mode_c = c
+                        if not old_ancestor_colour == mode_c:
+                            if mode_c == ...:
+                                del ancestor['colour']
+                            else:
+                                ancestor['colour'] = mode_c
+                else:
+                    for ancestor in reversed(ancestors):
+                        if 'colours' in ancestor:
+                            ancestor['colours'][...] += 1
     
     entries.sort(key = lambda x : -(x['year']))
     for year in entries:
@@ -394,10 +418,35 @@ def open_feed(feed_node, recall):
             if (node is None) or ('inner' in node):
                 continue
             action = ... if action == '0' else (int(action) % 8)
+            old_colour = node['colour'] if 'colour' in node else ...
+            if action == old_colour:
+                continue
             modify_entry(id, {node['guid'] : {'colour' : action}})
             if action == ...:
                 del node['colour']
             else:
                 node['colour'] = action
             node['draw_line'] = -1
+            pubdate = node['pubdate']
+            ancestors = [years[pubdate[0]]]
+            while len(ancestors) < 3:
+                ancestors.append(ancestors[-1][pubdate[len(ancestors)]])
+            for ancestor in reversed(ancestors):
+                if 'colours' not in ancestor:
+                    ancestor['colours'] = dict((c, 0) for c in list(range(8)))
+                    ancestor['colours'][...] = len(ancestor['inner'])
+                old_ancestor_colour = ancestor['colour'] if 'colour' in ancestor else ...
+                ancestor['colours'][old_colour] -= 1
+                ancestor['colours'][action] += 1
+                mode_c, mode_f = ..., 0
+                for c in range(8):
+                    if mode_f < ancestor['colours'][c]:
+                        mode_f = ancestor['colours'][c]
+                        mode_c = c
+                if not old_ancestor_colour == mode_c:
+                    if mode_c == ...:
+                        del ancestor['colour']
+                    else:
+                        ancestor['colour'] = mode_c
+                    ancestor['draw_line'] = -1
 
