@@ -154,7 +154,8 @@ If this variable is not set, or if it is empty,
 available in @env{PATH}, the first of @command{more},
 @command{most} and @command{pg}, that is. In the unlikely
 event that no pagers is found, @command{featherweight} will
-act as a dumb pager.
+act as a dumb pager, namly to print everything to the terminal
+and wait for the user to press @kbd{enter}.
 
 @item PATH
 This environment variable is used when @env{PAGER} is not set
