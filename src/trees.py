@@ -252,7 +252,7 @@ class Tree():
             self.line += 1
             if self.select_stack[-1][0] is feed:
                 self.line = ~self.line
-        if ('inner' in feed):
+        if 'inner' in feed:
             if collapsed:
                 feed['draw_expanded'] = False
             else:
