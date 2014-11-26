@@ -31,6 +31,7 @@ quote = (lambda x : _("'%s'") % x) if islinux else (lambda x : _('‘%s’') % x
 double_quote = (lambda x : _('"%s"') % x) if islinux else (lambda x : _('“%s”') % x)
 abbr = lambda x : ('~%s' % x[len(home):] if x.startswith(home + '/') else x)
 
-
 root = '%s/.var/lib/%s' % (home, 'featherweight')
+
+terminated = False
 

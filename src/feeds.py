@@ -167,15 +167,17 @@ def update_entries(feed_id, function):
     @param   function:(have:set, unread:set)→void  Function that modifies the feed information
     @return  :bool                                 Whether the feed was updated
     '''
+    global terminated
     updated = False
-    with touch('%s/%s' % (root, feed_id)) as feed_flock:
+    pathname = '%s/%s' % (root, feed_id)
+    with touch(pathname) as feed_flock:
         flock(feed_flock, True)
         feed_info = None
-        try:
-            with open('%s/%s' % (root, feed_id), 'rb') as file:
+        if os.access(pathname, os.F_OK):
+            with open(pathname, 'rb') as file:
                 feed_info = file.read()
-        except:
-            pass
+                with open('%s.bak' % pathname, 'wb') as bakfile:
+                    bakfile.write(_feed_content)
         if feed_info is not None:
             feed_info = feed_info.decode('utf-8', 'strict')
             feed_info = eval(feed_info) if len(feed_info) > 0 else {}
@@ -184,12 +186,60 @@ def update_entries(feed_id, function):
             updated_ = len(have) + len(unread)
             function(have, unread)
             feed_info = repr(feed_info).encode('utf-8')
-            with open('%s/%s' % (root, feed_id), 'wb') as file:
-                file.write(feed_info)
+            try:
+                with open(pathname, 'wb') as file:
+                    file.write(feed_info)
+            except Exception as err:
+                Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
+                print('\n\033[?9l\033[?25h\033[?1049l' if pid is None else '\n', end = '', flush = True)
+                pathname = abbr(root) + pathname[len(root):]
+                print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % (pathname, pathname))
+                terminated = True
+                if pid is None:
+                    raise err
             if not updated_ == len(have) + len(unread):
                 updated = True
         unflock(feed_flock)
     return updated
+
+
+
+def update_content_file(feed_id, function):
+    '''
+    Apply changes to a news feed content file
+    
+    @param  feed_in:str                              The ID of the feed
+    @param  function:(itr<dict<str, int|str>>)→void  Function that modifies the content
+    '''
+    global terminated
+    pathname = '%s/%s-content' % (root, feed_id)
+    with touch(pathname) as feed_flock:
+        pid = flock_fork(feed_flock)
+        if pid == 0:
+            return
+        feed_content = None
+        if os.access(pathname, os.F_OK):
+            with open(pathname, 'rb') as file:
+                feed_content = file.read()
+                with open('%s.bak' % pathname, 'wb') as bakfile:
+                    bakfile.write(_feed_content)
+        if feed_content is not None:
+            feed_content = feed_content.decode('utf-8', 'strict')
+            feed_content = eval(feed_content) if len(feed_content) > 0 else []
+            function(feed_content)
+            feed_content = repr(feed_content).encode('utf-8')
+            try:
+                with open(pathname, 'wb') as file:
+                    file.write(feed_content)
+            except Exception as err:
+                Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
+                print('\n\033[?9l\033[?25h\033[?1049l' if pid is None else '\n', end = '', flush = True)
+                pathname = abbr(root) + pathname[len(root):]
+                print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % (pathname, pathname))
+                terminated = True
+                if pid is None:
+                    raise err
+        unflock_fork(feed_flock, pid)
 
 
 
@@ -200,28 +250,13 @@ def delete_entry_content(feed_id, guids):
     @param  feed_in:str     The ID of the feed
     @param  guids:set<str>  The GUID:s of the messages to delete
     '''
-    with touch('%s/%s-content' % (root, feed_id)) as feed_flock:
-        pid = flock_fork(feed_flock)
-        if pid == 0:
-            return
-        feed_content = None
-        try:
-            with open('%s/%s-content' % (root, feed_id), 'rb') as file:
-                feed_content = file.read()
-        except:
-            pass
-        if feed_content is not None:
-            feed_content = feed_content.decode('utf-8', 'strict')
-            feed_content = eval(feed_content) if len(feed_content) > 0 else []
-            i = len(feed_content)
-            while i > 0:
-                i -= 1
-                if feed_content[i]['guid'] in guids:
-                    del feed_content[i]
-            feed_content = repr(feed_content).encode('utf-8')
-            with open('%s/%s-content' % (root, feed_id), 'wb') as file:
-                file.write(feed_content)
-        unflock_fork(feed_flock, pid)
+    def fun(feed_content):
+        i = len(feed_content)
+        while i > 0:
+            i -= 1
+            if feed_content[i]['guid'] in guids:
+                del feed_content[i]
+    update_content_file(feed_id, fun)
 
 
 
@@ -234,31 +269,16 @@ def modify_entry(feed_id, updates):
                                                               to mapping for keys to new values, `...` as a
                                                               value means that the key should be deleted
     '''
-    with touch('%s/%s-content' % (root, feed_id)) as feed_flock:
-        pid = flock_fork(feed_flock)
-        if pid == 0:
-            return
-        feed_content = None
-        try:
-            with open('%s/%s-content' % (root, feed_id), 'rb') as file:
-                feed_content = file.read()
-        except:
-            pass
-        if feed_content is not None:
-            feed_content = feed_content.decode('utf-8', 'strict')
-            feed_content = eval(feed_content) if len(feed_content) > 0 else []
-            for content in feed_content:
-                if content['guid'] in updates:
-                    values = updates[content['guid']]
-                    for key in values.keys():
-                        if values[key] == ...:
-                            del content[key]
-                        else:
-                            content[key] = values[key]
-            feed_content = repr(feed_content).encode('utf-8')
-            with open('%s/%s-content' % (root, feed_id), 'wb') as file:
-                file.write(feed_content)
-        unflock_fork(feed_flock, pid)
+    def fun(feed_content):
+        for content in feed_content:
+            if content['guid'] in updates:
+                values = updates[content['guid']]
+                for key in values.keys():
+                    if values[key] == ...:
+                        del content[key]
+                    else:
+                        content[key] = values[key]
+    update_content_file(feed_id, fun)
 
 
 

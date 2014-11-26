@@ -92,7 +92,6 @@ Popen('stty -icanon -echo'.split(' '), stdout = PIPE, stderr = PIPE).communicate
 print('\033[?1049h\033[?25l\033[?9h', end = '', flush = True)
 
 
-terminated = False
 
 def update_feeds(function):
     global terminated
@@ -115,8 +114,11 @@ def update_feeds(function):
         try:
             with open('%s/feeds' % root, 'wb') as file:
                 file.write(_feeds.encode('utf-8'))
-            with open('%s/status' % root, 'wb') as file:
-                file.write(('%i\n' % status).encode('utf-8'))
+            try:
+                with open('%s/status' % root, 'wb') as file:
+                    file.write(('%i\n' % status).encode('utf-8'))
+            except:
+                pass
         except Exception as err:
             Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
             print('\n\033[?9l\033[?25h\033[?1049l' if pid is None else '\n', end = '', flush = True)

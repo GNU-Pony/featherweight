@@ -56,30 +56,31 @@ def update_feed(feed, if_group):
             have = feed_info['have']
             unread = feed_info['unread']
             url = feed_info['url']
+            updated = True
             
             try:
                 feed_data = None
                 if url.startswith('file://'):
                     url = url[len('file://'):]
-                    if os.access(url, os.R_OK):
+                    if os.access(url, os.F_OK):
                         with open(url, 'rb') as feed_file:
                             feed_data = feed_file.read().decode('utf-8', 'strict')
                 else:
                     feed_data = Popen(['wget', url, '-O', '-'], stdout = PIPE).communicate()[0]
                 feed_data = [] if feed_data is None else parse_feed(feed_data)
                 old_data = []
-                try:
+                if os.access('%s/%s-content' % (root, id), os.F_OK):
                     with open('%s/%s-content' % (root, id), 'rb') as file:
-                        old_data = eval(file.read().decode('utf-8', 'strict'))
-                except:
-                    pass
+                        bakdata = file.read()
+                        with open('%s/%s-content.bak' % (root, id), 'rb') as bakfile:
+                            bakfile.write(bakdata)
+                    old_data = eval(data.decode('utf-8', 'strict'))
+                else:
+                    bakdata = None
                 for channel in feed_data:
                     for item in channel['items']:
                         if 'guid' not in item:
-                            if 'link' in item:
-                                item['guid'] = item['link']
-                            else:
-                                item['guid'] = item['title']
+                            item['guid'] = item['link' if 'link' in item else 'title']
                         guid = item['guid']
                         if guid not in have:
                             unread.add(guid)
@@ -87,14 +88,35 @@ def update_feed(feed, if_group):
                             old_data.append(item)
                             if 'pubdate' not in item:
                                 item['pubdate'] = now
-                with open('%s/%s-content' % (root, id), 'wb') as file:
-                    file.write(repr(old_data).encode('utf-8'))
+                try:
+                    with open('%s/%s-content' % (root, id), 'wb') as file:
+                        file.write(repr(old_data).encode('utf-8'))
+                except Exception as err:
+                    try:
+                        if bakdata is not None:
+                            with open('%s/%s-content' % (root, id), 'wb') as file:
+                                file.write(bakdata)
+                    except:
+                        pass
+                    raise err
             except:
-                pass
+                updated = False
             
-            feed['new'] = len(unread)
-            with open('%s/%s' % (root, id), 'wb') as file:
-                file.write(repr(feed_info).encode('utf-8'))
-                file.flush()
+            if updated:
+                with open('%s/%s' % (root, id), 'rb') as file:
+                    bakdata = file.read()
+                    with open('%s/%s.bak' % (root, id), 'wb') as bakfile:
+                        bakfile.write(bakdata)
+                try:
+                    with open('%s/%s' % (root, id), 'wb') as file:
+                        file.write(repr(feed_info).encode('utf-8'))
+                except Exception as err:
+                    try:
+                        with open('%s/%s-content' % (root, id), 'wb') as file:
+                            file.write(bakdata)
+                    except:
+                        pass
+                    raise err
+                feed['new'] = len(unread)
             unflock(feed_flock)
 
