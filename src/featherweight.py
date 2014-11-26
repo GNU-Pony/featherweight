@@ -271,7 +271,39 @@ try:
         elif action == 'in':
             if node is None:
                 continue
-            pass # TODO reorder
+            parent = tree.select_stack[-2][0]
+            nodei = tree.select_stack[-1][1]
+            id_p = None if parent is None else parent['id']
+            parent = feeds if parent is None else parent['inner']
+            if (nodei + 1 == len(parent)) or (parent[nodei + 1]['url'] is not None):
+                continue
+            id_n, id_m = node['id'], parent[nodei + 1]['id']
+            def save(t, id_t = None):
+                if id_p == id_t:
+                    n_is = [i for i in range(len(t)) if t[i]['id'] == id_n]
+                    m_is = [i for i in range(len(t)) if t[i]['id'] == id_m]
+                    if (len(n_is) != 1) or (m_is != [n_is[0] + 1]):
+                        return True
+                    n_i, new_parent = n_is[0], t[m_is[0]]
+                    if new_parent['url'] is not None:
+                        return True
+                    if 'inner' not in new_parent:
+                        new_parent['inner'] = []
+                    new_parent['inner'].insert(0, t[n_i])
+                    del t[n_i]
+                    return True
+                else:
+                    for i in range(len(t)):
+                        child = t[i]
+                        if 'inner' in child:
+                            if save(child['inner'], child['id']):
+                                return True
+                return False
+            update_feeds(save)
+            tree.select_stack.pop()
+            tree.select_stack.append((parent[nodei], nodei))
+            tree.select_stack.append((parent[nodei]['inner'][0], 0))
+            tree.draw_force = True
         elif action in ('read', 'unread'):
             pass # we do not have entires, just feeds, nothing to read/unread
         elif action == 'back':
