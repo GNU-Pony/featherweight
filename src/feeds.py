@@ -203,9 +203,10 @@ def modify_entry(feed_id, updates):
     '''
     Modify a feed entry
     
-    @param  feed_in:str                                   The ID of the feed
-    @param  updates:dict<guid:str, values:dict<str, ¿?>>  Mapping from GUID:s, of the messages to update,
-                                                          to mapping for keys to new values
+    @param  feed_in:str                                       The ID of the feed
+    @param  updates:dict<guid:str, values:dict<str, ¿?|...>>  Mapping from GUID:s, of the messages to update,
+                                                              to mapping for keys to new values, `...` as a
+                                                              value means that the key should be deleted
     '''
     with touch('%s/%s-content' % (root, feed_id)) as feed_flock:
         flock(feed_flock, True)
@@ -222,7 +223,10 @@ def modify_entry(feed_id, updates):
                 if content['guid'] in updates:
                     values = updates[content['guid']]
                     for key in values.keys():
-                        content[key] = values[key]
+                        if values[key] == ...:
+                            del content[key]
+                        else:
+                            content[key] = values[key]
             feed_content = repr(feed_content).encode('utf-8')
             with open('%s/%s-content' % (root, feed_id), 'wb') as file:
                 file.write(feed_content)
@@ -387,8 +391,13 @@ def open_feed(feed_node, recall):
         elif action == 'unread':
             read_unread(+1, get_nodes(node, lambda n : n['new'] == 0))
         elif action in '012345678':
-            if node is None:
+            if (node is None) or ('inner' in node):
                 continue
             action = ... if action == '0' else (int(action) % 8)
-            pass # TODO
+            modify_entry(id, {node['guid'] : {'colour' : action}})
+            if action == ...:
+                del node['colour']
+            else:
+                node['colour'] = action
+            node['draw_line'] = -1
 
