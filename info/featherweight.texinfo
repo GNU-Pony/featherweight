@@ -12,7 +12,7 @@
 
 @dircategory Internet
 @direntry
-* featherweight: (featherweight).    A news feed aggregator for the terminal
+* featherweight: (featherweight).    A news aggregator for the terminal
 @end direntry
 
 
@@ -31,13 +31,13 @@ Texts. A copy of the license is included in the section entitled
 
 @ifnottex
 @node Top
-@top featherweight -- A news feed aggregator for the terminal
+@top featherweight -- A news aggregator for the terminal
 @insertcopying
 @end ifnottex
 
 @titlepage
 @title featherweight
-@subtitle A news feed aggregator for the terminal
+@subtitle A news aggregator for the terminal
 @author by Mattias Andrée (maandree)
 
 @page
@@ -61,11 +61,64 @@ Texts. A copy of the license is included in the section entitled
 @node Overview
 @chapter Overview
 
+@command{featherweight} is a simple news aggregator designed for the
+terminal. @command{featherweight} is designed to pull down the latest
+news in cron jobs. Due to it running as a cron job you are able to
+display the number of new news in your shell prompt line (PS1), or in
+a monitor program, and not have an application constantly open in the
+background.
+
 
 
 @node Invoking
 @chapter Invoking
 
+@command{featherweight} recognises three options:
+
+@table @option
+@item --update
+Fetch the latests news.
+
+@item --status
+Print the number of unread news.
+
+@item --system
+Causes @command{featherweight} to not be interactive.
+@end table
+
+@command{featherweight --update --system GROUP} is intended
+to be used from a cron jobs to fetch news updates in
+the background.
+
+@command{featherweight --status --system GROUP} is intended
+to be used by monitor programs.
+
+@code{GROUP}, which is only recognised if @option{--update}
+or @option{--status} (or both) is used. It cannot start with
+a dash (`-'), and only one argument (or zero) is allowed.
+It selects which news feeds are fetched, or inspected. If
+it is omitted, all news feeds are fetched or inspected.
+
+In your shell prompt you do probably not want to use
+@command{featherweight --status --system}, because it is
+a bit slow. @command{cat ~/.var/lib/featherweight/status}
+is equivalent but faster, or more precisely:
+   
+@example
+(exec 10<~/.var/lib/featherweight/feeds && flock -s 10 &&
+ cat ~/.var/lib/featherweight/status &&
+ flock -u 10 && exec 10<&-)
+@end example
+
+You also use
+@example
+flock -x ~/.var/lib/featherweight/feeds \
+      -c 'cat ~/.var/lib/featherweight/status'
+@end example
+but that appears to be have as fast as to long version.
+
+@command{featherweight --update} can be used to fetch the
+latest news and then open the news reader.
 
 
 @node GNU Free Documentation License
