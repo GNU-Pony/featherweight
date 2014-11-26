@@ -242,7 +242,35 @@ try:
                 return False
             update_feeds(save)
             tree.select_stack[-1] = (parent[nodej], nodej)
-        elif action in ('out', 'in'):
+        elif action == 'out':
+            if len(tree.select_stack) < 3:
+                continue
+            parent = tree.select_stack[-2][0]
+            id_p, id_n = parent['id'], node['id']
+            def save(t, id_t = None, t_i = None, p = None):
+                if id_p == id_t:
+                    n_is = [i for i in range(len(t)) if t[i]['id'] == id_n]
+                    if len(n_is) == 1:
+                        n_i = n_is[0]
+                        p.insert(t_i, t[n_i])
+                        del t[n_i]
+                        if len(t) == 0:
+                            del p[t_i + 1]['inner']
+                    return True
+                else:
+                    for i in range(len(t)):
+                        child = t[i]
+                        if 'inner' in child:
+                            if save(child['inner'], child['id'], i, t):
+                                return True
+                return False
+            update_feeds(save)
+            tree.select_stack.pop()
+            tree.select_stack[-1] = (node, tree.select_stack[-1][1])
+            tree.draw_force = True
+        elif action == 'in':
+            if node is None:
+                continue
             pass # TODO reorder
         elif action in ('read', 'unread'):
             pass # we do not have entires, just feeds, nothing to read/unread
