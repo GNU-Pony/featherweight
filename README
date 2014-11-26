@@ -26,7 +26,7 @@ Navigation:
 	down     Go to the node printed directly below the marked node
 	C-up     Go to the previous node with the same parent, or the parent if at the first one
 	C-down   Go to the next node with the same parent, or the next node of
-	         the nearest ancestor with a next node with the same parsen
+	         the nearest ancestor with a next node with the same parent
 	C-left   Go to the root
 	left     Go to the parent of the marked node
 	right    Go to the first of the marked node, expand if necessary
