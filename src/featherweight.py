@@ -42,7 +42,7 @@ if not os.path.exists(root):
 
 feeds = None
 with touch('%s/feeds' % root) as feeds_flock:
-    flock(feeds_flock, update)
+    flock(feeds_flock, update, _('Feed database is locked by another process, waiting...'))
     with open('%s/feeds' % root, 'rb') as file:
         feeds = file.read().decode('utf-8', 'strict')
     feeds = [] if len(feeds) == 0 else eval(feeds)
@@ -96,14 +96,12 @@ terminated = False
 
 def update_feeds(function):
     global terminated
+    function(feeds)
+    Tree.count_new(feeds)
     with touch('%s/feeds' % root) as feeds_flock:
-        try:
-            flock(feeds_flock, True, True)
-        except:
-            print(_('Feed database is locked by another process, waiting...'))
-            flock(feeds_flock, True)
-        function(feeds)
-        Tree.count_new(feeds)
+        pid = flock_fork(feeds_flock)
+        if pid == 0:
+            return
         _feeds = None
         with open('%s/feeds' % root, 'rb') as file:
             _feeds = file.read()
@@ -121,11 +119,12 @@ def update_feeds(function):
                 file.write(('%i\n' % status).encode('utf-8'))
         except Exception as err:
             Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
-            print('\n\033[?9l\033[?25h\033[?1049l', end = '', flush = True)
+            print('\n\033[?9l\033[?25h\033[?1049l' if pid is None else '\n', end = '', flush = True)
             print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % ('%s/feeds' % abbr(root), '%s/feeds' % abbr(root)))
             terminated = True
-            raise err
-        unflock(feeds_flock)
+            if pid is None:
+                raise err
+        unflock_fork(feeds_flock, pid)
 
 
 try:

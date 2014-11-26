@@ -59,7 +59,7 @@ def load_feed(id):
     years = {}
     have, unread = set(), set()
     with touch('%s/%s' % (root, id)) as feed_flock:
-        flock(feed_flock, False)
+        flock(feed_flock, False, _('The feed is locked by another process, waiting...'))
         feed_info, feed_data = None, None
         try:
             with open('%s/%s' % (root, id), 'rb') as file:
@@ -201,7 +201,9 @@ def delete_entry_content(feed_id, guids):
     @param  guids:set<str>  The GUID:s of the messages to delete
     '''
     with touch('%s/%s-content' % (root, feed_id)) as feed_flock:
-        flock(feed_flock, True)
+        pid = flock_fork(feed_flock)
+        if pid == 0:
+            return
         feed_content = None
         try:
             with open('%s/%s-content' % (root, feed_id), 'rb') as file:
@@ -219,7 +221,7 @@ def delete_entry_content(feed_id, guids):
             feed_content = repr(feed_content).encode('utf-8')
             with open('%s/%s-content' % (root, feed_id), 'wb') as file:
                 file.write(feed_content)
-        unflock(feed_flock)
+        unflock_fork(feed_flock, pid)
 
 
 
@@ -233,7 +235,9 @@ def modify_entry(feed_id, updates):
                                                               value means that the key should be deleted
     '''
     with touch('%s/%s-content' % (root, feed_id)) as feed_flock:
-        flock(feed_flock, True)
+        pid = flock_fork(feed_flock)
+        if pid == 0:
+            return
         feed_content = None
         try:
             with open('%s/%s-content' % (root, feed_id), 'rb') as file:
@@ -254,7 +258,7 @@ def modify_entry(feed_id, updates):
             feed_content = repr(feed_content).encode('utf-8')
             with open('%s/%s-content' % (root, feed_id), 'wb') as file:
                 file.write(feed_content)
-        unflock(feed_flock)
+        unflock_fork(feed_flock, pid)
 
 
 
