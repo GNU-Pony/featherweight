@@ -352,6 +352,7 @@ def open_feed(feed_node, recall):
                 proc = Popen(['html2text'], stdin = PIPE, stdout = PIPE, stderr = sys.stderr)
                 description = proc.communicate(description)[0]
                 pager = os.environ['PAGER'] if 'PAGER' in os.environ else None
+                pager = None if pager == '' else pager
                 if pager is None:
                     path = os.environ['PATH'] if 'PATH' in os.environ else None
                     if path is not None:
