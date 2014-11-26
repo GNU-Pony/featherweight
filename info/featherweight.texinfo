@@ -54,6 +54,7 @@ Texts. A copy of the license is included in the section entitled
 * Overview::                        Brief overview of @command{featherweight}.
 * Invoking::                        Invocation of @command{featherweight}.
 * Environment::                     Environment variables used by @command{featherweight}.
+* Interface::                       How to use @command{featherweight}.
 * GNU Free Documentation License::  Copying and sharing this manual.
 @end menu
 
@@ -155,7 +156,7 @@ available in @env{PATH}, the first of @command{more},
 @command{most} and @command{pg}, that is. In the unlikely
 event that no pagers is found, @command{featherweight} will
 act as a dumb pager, namly to print everything to the terminal
-and wait for the user to press @kbd{enter}.
+and wait for the user to press @kbd{return}.
 
 @item PATH
 This environment variable is used when @env{PAGER} is not set
@@ -167,6 +168,142 @@ perhaps to by does programs to find other programs.
 If you want to use a proxy, you use set your environment
 variables so that @command{wget} does that.
 @inforef{Proxies,, wget}.
+
+
+
+@node Interface
+@chapter Interface
+
+@command{featherweight}'s interface@footnote{What you get
+when you run the command @command{featherweight} without
+the @option{--system} flag.} has four parts:
+
+@itemize @bullet{}
+@item The feed tree
+@item The news tree
+@item The news reader
+@item The editor
+@end itemize
+
+For most users the news reader will be the program
+@command{less}. You can read more about this in
+@ref{Environment}. @command{less} probably does
+not require any introduction, however, to exit
+@command{less} you press the @kbd{q}-key.
+
+The editor, which is what you get if you press the
+@kbd{e}-key on an editable node in one of trees,
+is a very limited Emacs-like editor, pytagomacs
+to be precise. The important part here is that it
+is exited by pressing @kbd{C-x, C-c}
+@footnote{@kbd{control+x} followed by @kbd{control+c}.},
+and changes are applied with @kbd{C-x, C-s}.
+
+The feed tree is the first thing you will see.
+It is very similar to the news tree, which is what
+you get when you open feed. These two trees are
+navigated and edited with the keyboards:
+
+@table @kbd
+@item q
+Exit @command{featherweight}.
+@item tab
+Return to the feed tree if you are in the news tree.
+@item C-l
+Redraw the screen.
+@item plus
+If in the feed tree. Create new folder or feed
+subscription. This will open the editor, and
+you will be asked to enter specify a title,
+group and URL. Only the title is mandatory,
+if the group is unspecified, the group will
+be set to an empty string. If the URL is not
+specified, a folder is created. You can only
+use this when either the root or a folder
+is marked.
+@item d
+Delete the marked node. You will be asked to
+confirmation your action.
+@item e
+Edit the marked node. The root and branches
+in the news tree cannot be edited.
+@item r
+If in the news tree, mark the marked node as
+read. If the marked node is a branch, or is
+the root, all nodes inside it are marked as
+read.
+@item R
+If in the news tree, mark the marked node as
+unread. If the marked node is a branch, or is
+the root, all nodes inside it are marked as
+unread.
+@item u
+Move the marked node up one step in its parent.
+@item j
+Move the marked node down one step in its parent.
+@item U
+Move the marked node to the position of its parent.
+@item J
+Move the marked node to the first position inside
+the node below it.
+@item space
+Expand or collapes the marked node. If the root
+is marked, all nodes are expanded or collapsed.
+The root itself cannot be collapsed.
+@item return
+If the marked node is a feed, go the the news
+tree and open the feed of the marked node.
+If the marked node is a news article, read that
+article. Otherwise, perform the same action as
+with the @kbd{space} key.
+@item up
+Mark the node printed directly above the currently marked node.
+@item down
+Mark the node printed directly below the currently marked node.
+@item C-up
+Mark the previous node with the same parent,
+or the parent if at the first one.
+@item C-down
+Mark the next node with the same parent, or the next node of
+the nearest ancestor with a next node with the same parent.
+@item C-left
+Mark the root.
+@item left
+Mark the parent of the marked node.
+@item right
+Mark the first of the marked node, expand then marked node
+if it is collapsed.
+@item n
+@itemx P
+Mark the next unread leaf.
+@item N
+@itemx p
+Mark the previous unread leaf.
+@item 1
+Change the colour of the marked node to red.
+The root of the trees and the branches in the
+news tree cannot be coloured.
+@item 2
+Change the colour of the marked node to green.
+@item 3
+Change the colour of the marked node to yellow.
+@item 4
+Change the colour of the marked node to blue.
+@item 5
+Change the colour of the marked node to magenta.
+@item 6
+Change the colour of the marked node to cyan.
+@item 7
+Change the colour of the marked node to white.
+@item 8
+Change the colour of the marked node to black.
+@item 0
+Change the colour of the marked node to the default colour.
+@end table
+
+If you are in an xterm-compatible terminal, you
+can use the mouse to navigate the trees.
+
 
 
 @node GNU Free Documentation License
