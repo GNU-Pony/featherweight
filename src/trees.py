@@ -570,7 +570,7 @@ class Tree():
                         self.collapsed_count -= 1
                         self.draw_force = True
                 self.print_tree()
-            elif buf[-1] in ACTION_MAP:
+            elif (buf[-2] not in '[;') and (buf[-1] in ACTION_MAP):
                 return (ACTION_MAP[buf[-1]], self.select_stack[-1][0])
             elif (buf[-3] != '\033' or buf[-2] != '[') and (buf[-5] != '\033' or buf[-4] != '[' or buf[-2] != ';') and (ord('0') <= ord(buf[-1]) <= ord('9')):
                 return (buf[-1], self.select_stack[-1][0])
