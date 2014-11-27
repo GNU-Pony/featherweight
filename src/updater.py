@@ -96,8 +96,8 @@ def update_feed(feed, if_group, now = None):
                 except Exception as err:
                     try:
                         if bakdata is not None:
-                            with open('%s/%s-content' % (root, id), 'wb') as file:
-                                file.write(bakdata)
+                            with open('%s/%s-content' % (root, id), 'wb') as bakfile:
+                                bakfile.write(bakdata)
                     except:
                         pass
                     raise err
@@ -105,16 +105,17 @@ def update_feed(feed, if_group, now = None):
                 updated = False
             
             if updated:
-                with open('%s/%s' % (root, id), 'rb') as file:
-                    bakdata = file.read()
-                    with open('%s/%s.bak' % (root, id), 'wb') as bakfile:
-                        bakfile.write(bakdata)
+                if os.access('%s/%s' % (root, id), os.F_OK):
+                    with open('%s/%s' % (root, id), 'rb') as file:
+                        bakdata = file.read()
+                        with open('%s/%s.bak' % (root, id), 'wb') as bakfile:
+                            bakfile.write(bakdata)
                 try:
                     with open('%s/%s' % (root, id), 'wb') as file:
                         file.write(repr(feed_info).encode('utf-8'))
                 except Exception as err:
                     try:
-                        with open('%s/%s-content' % (root, id), 'wb') as file:
+                        with open('%s/%s' % (root, id), 'wb') as file:
                             file.write(bakdata)
                     except:
                         pass
