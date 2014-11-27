@@ -3,5 +3,6 @@ RUNTIME DEPENDENCIES:
 	python3
 	coreutils
 	wget
+	pytagomacs
 	html2text
 

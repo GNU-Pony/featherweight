@@ -20,11 +20,12 @@ import os
 import sys
 from subprocess import Popen, PIPE
 
+from pytagomacs.editor import *
+
 from common import *
 from common import _
 from flocker import *
 from trees import *
-from editor import *
 
 
 MONTHS = { 1 : 'January',

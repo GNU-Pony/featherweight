@@ -22,12 +22,13 @@ import sys
 import uuid
 from subprocess import Popen, PIPE
 
+from pytagomacs.editor import *
+
 from common import *
 from common import _
 from flocker import *
 from trees import *
 from updater import *
-from editor import *
 from feeds import *
 
 
