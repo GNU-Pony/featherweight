@@ -6,3 +6,19 @@ RUNTIME DEPENDENCIES:
 	pytagomacs
 	html2text
 
+
+BUILD DEPENDENCIES:
+
+	make
+	coreutils
+	python3
+	zip
+	texinfo (opt-out, for info, pdf, dvi and ps manuals)
+	texlive-core (opt-in, for pdf, dvi and ps manuals)
+
+
+INSTALL DEPENDENCIES:
+
+	make
+	coreutils
+
