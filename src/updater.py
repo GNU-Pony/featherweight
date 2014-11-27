@@ -33,7 +33,7 @@ def update_feed(feed, if_group, now = None):
     @param  feed:dict<str, _|int|itr<↑>>  The feed
     @param  if_group:str?                 The name of the group the feed should belong to
                                           for it to be updated, `None` to update everything
-    @param  now:tuple(int)                The current time, intended for internal use
+    @param  now:tuple(int)?               The current time, intended for internal use
     '''
     if now is None:
         now = time.gmtime()

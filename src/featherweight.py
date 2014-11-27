@@ -81,7 +81,7 @@ with touch('%s/feeds' % root) as feeds_flock:
             flat_feeds = dict((feed['id'], feed) for feed in flatten(feeds))
             for id, new_value in new:
                 if id in flat_feeds.keys():
-                    feed['new'] += new_value - old[id]
+                    flat_feeds[id]['new'] += new_value - old[id]
             updated = repr(feeds)
             data = updated.encode('utf-8')
             status_data = ('%i\n' % Tree.count_new(feeds)).encode('utf-8')
