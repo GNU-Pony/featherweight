@@ -28,13 +28,13 @@ def parse_feed(feed):
     '''
     parser = xml.parsers.expat.ParserCreate()
     
-    global is_rss, feeds, root, item, text, is_atom, attrs
     is_rss = False
     is_atom = False
     feeds = []
     root = None
     item = None
     text = None
+    attrs = None
     
     def rss_date(value):
         value = value.replace('\t', ' ').replace('\n', ' ').replace('\r', ' ')
@@ -136,7 +136,7 @@ def parse_feed(feed):
     
     
     def start_element(name, attributes):
-        global is_rss, feeds, root, item, text, is_atom, attrs
+        nonlocal is_rss, feeds, root, item, text, is_atom, attrs
         attrs = attributes
         name = name.lower()
         if is_rss:
@@ -160,7 +160,7 @@ def parse_feed(feed):
     
     
     def end_element(name):
-        global is_rss, feeds, root, item, text, is_atom, attrs
+        nonlocal is_rss, feeds, root, item, text, is_atom, attrs
         name = name.lower()
         if (root is not None) and is_rss:
             if item is not None:
@@ -214,7 +214,7 @@ def parse_feed(feed):
     
     
     def char_data(data):
-        global text
+        nonlocal text
         if text is not None:
             text += data
     
