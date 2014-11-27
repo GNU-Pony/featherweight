@@ -127,13 +127,21 @@ latest news and then open the news reader.
 @node Environment
 @chapter Environment
 
-@command{featherweight} recongises five environment variables:
+@command{featherweight} recongises six environment variables:
 
 @table @env
-@item FEATHERWEIGHT_RAW
-If this environment variable is set to @code{1}, @code{y},
-or @code{yes} (case-insensitive), @command{featherweight} will
-not convert HTML to pony-readable format.
+@item FEATHERWEIGHT_HTML
+If this envrionment variable is set but not empty.
+@command{featherweight} will use the commend described
+by it for converting HTML to pony-readable format. The
+environment variable follows the same rules as @env{PAGER},
+including reading the content from standard input
+(@file{/dev/stdin}) and printing the readable text to
+standard output (@file{/dev/stdout}), with @command{html2text}
+as the fallback. There is however no last-resort formatter.
+Setting @env{FEATHERWEIGHT_HTML} to @command{cat} will
+have the effect that the HTML is not converted to
+pony-readable format.
 
 @item HOME
 Your home directory, @file{/.var/lib/featherweight} is appended
