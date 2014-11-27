@@ -61,17 +61,13 @@ def load_feed(id):
     with touch('%s/%s' % (root, id)) as feed_flock:
         flock(feed_flock, False, _('The feed is locked by another process, waiting...'))
         feed_info, feed_data = None, None
-        try:
+        if os.access('%s/%s' % (root, id), os.F_OK):
             with open('%s/%s' % (root, id), 'rb') as file:
                 feed_info = file.read()
-            try:
+            if os.access('%s/%s-content' % (root, id), os.F_OK)
                 with open('%s/%s-content' % (root, id), 'rb') as file:
                     feed_data = file.read()
-            except:
-                pass
             unflock(feed_flock)
-        except:
-            return
         
         feed_info = feed_info.decode('utf-8', 'strict')
         feed_info = eval(feed_info) if len(feed_info) > 0 else {}
@@ -177,7 +173,7 @@ def update_entries(feed_id, function):
             with open(pathname, 'rb') as file:
                 feed_info = file.read()
                 with open('%s.bak' % pathname, 'wb') as bakfile:
-                    bakfile.write(_feed_content)
+                    bakfile.write(feed_info)
         if feed_info is not None:
             feed_info = feed_info.decode('utf-8', 'strict')
             feed_info = eval(feed_info) if len(feed_info) > 0 else {}
@@ -222,7 +218,7 @@ def update_content_file(feed_id, function):
             with open(pathname, 'rb') as file:
                 feed_content = file.read()
                 with open('%s.bak' % pathname, 'wb') as bakfile:
-                    bakfile.write(_feed_content)
+                    bakfile.write(feed_content)
         if feed_content is not None:
             feed_content = feed_content.decode('utf-8', 'strict')
             feed_content = eval(feed_content) if len(feed_content) > 0 else []
