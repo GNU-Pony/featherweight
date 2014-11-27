@@ -34,6 +34,15 @@ PKGNAME = featherweight
 # The name of the command as it should be installed
 COMMAND = featherweight
 
+# The major version number of the current Python installation
+PY_MAJOR = 3
+# The minor version number of the current Python installation
+PY_MINOR = 4
+# The version number of the current Python installation without a dot
+PY_VER = $(PY_MAJOR)$(PY_MINOR)
+# The version number of the current Python installation with a dot
+PY_VERSION = $(PY_MAJOR).$(PY_MINOR)
+
 # Python source files
 SRC = __main__ common feeds flocker parser trees updater
 
@@ -55,15 +64,15 @@ bin/featherweight: obj/featherweight.zip
 	cat $< >> $@
 	chmod a+x $@
 
-obj/featherweight.zip: compiled optimised $(foreach F,$(SRC),src/$(F).py)
+obj/featherweight.zip: $(foreach F,$(SRC),src/$(F).py src/__pycache__/$(F).cpython-$(PY_VER).pyc src/__pycache__/$(F).cpython-$(PY_VER).pyo)
 	@mkdir -p obj
-	cd src && zip ../$@ $(foreach F,$(SRC),$(F).py)
+	cd src && zip ../$@ $(foreach F,$(SRC),$(F).py __pycache__/$(F).cpython-$(PY_VER).pyc __pycache__/$(F).cpython-$(PY_VER).pyo)
 
 .PHONY: compiled
-compiled: $(foreach M,$(SRC),src/__pycache__/$(M).cpython-$(PY_VER).pyc)
+compiled: $(foreach F,$(SRC),src/__pycache__/$(F).cpython-$(PY_VER).pyc)
 
 .PHONY: optimised
-optimised: $(foreach M,$(SRC),src/__pycache__/$(M).cpython-$(PY_VER).pyo)
+optimised: $(foreach F,$(SRC),src/__pycache__/$(F).cpython-$(PY_VER).pyo)
 
 src/__pycache__/%.cpython-$(PY_VER).pyc: src/%.py
 	python -m compileall $<
@@ -140,22 +149,22 @@ install-license:
 install-doc: install-info install-pdf install-ps install-dvi
 
 .PHONY: install-info
-install-info: featherweight.info
+install-info: bin/featherweight.info
 	install -dm755 -- "$(DESTDIR)$(INFODIR)"
 	install -m644 $< -- "$(DESTDIR)$(INFODIR)/$(PKGNAME).info"
 
 .PHONY: install-pdf
-install-pdf: featherweight.pdf
+install-pdf: bin/featherweight.pdf
 	install -dm755 -- "$(DESTDIR)$(DOCDIR)"
 	install -m644 $< -- "$(DESTDIR)$(DOCDIR)/$(PKGNAME).pdf"
 
 .PHONY: install-ps
-install-ps: featherweight.ps
+install-ps: bin/featherweight.ps
 	install -dm755 -- "$(DESTDIR)$(DOCDIR)"
 	install -m644 $< -- "$(DESTDIR)$(DOCDIR)/$(PKGNAME).ps"
 
 .PHONY: install-dvi
-install-dvi: featherweight.dvi
+install-dvi: bin/featherweight.dvi
 	install -dm755 -- "$(DESTDIR)$(DOCDIR)"
 	install -m644 $< -- "$(DESTDIR)$(DOCDIR)/$(PKGNAME).dvi"
 
@@ -166,6 +175,7 @@ uninstall:
 	-rm -- "$(DESTDIR)$(BINDIR)/$(COMMAND)"
 	-rm -- "$(DESTDIR)$(LICENSEDIR)/$(PKGNAME)/COPYING"
 	-rm -- "$(DESTDIR)$(LICENSEDIR)/$(PKGNAME)/LICENSE"
+	-rmdir -- "$(DESTDIR)$(LICENSEDIR)/$(PKGNAME)"
 	-rmdir -- "$(DESTDIR)$(DOCDIR)/$(PKGNAME)/examples"
 	-rmdir -- "$(DESTDIR)$(DOCDIR)/$(PKGNAME)"
 	-rm -- "$(DESTDIR)$(INFODIR)/$(PKGNAME).info"
@@ -177,5 +187,5 @@ uninstall:
 
 .PHONY: clean
 clean:
-	-rm -r bin obj
+	-rm -r bin obj src/__pycache__
 
