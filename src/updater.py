@@ -74,7 +74,7 @@ def update_feed(feed, if_group, now = None):
                 if os.access('%s/%s-content' % (root, id), os.F_OK):
                     with open('%s/%s-content' % (root, id), 'rb') as file:
                         bakdata = file.read()
-                        with open('%s/%s-content.bak' % (root, id), 'rb') as bakfile:
+                        with open('%s/%s-content.bak' % (root, id), 'wb') as bakfile:
                             bakfile.write(bakdata)
                     old_data = eval(bakdata.decode('utf-8', 'strict'))
                 else:
