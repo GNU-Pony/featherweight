@@ -370,8 +370,9 @@ def open_feed(feed_node, recall):
                 if 'description' in node:
                     description += node['description']
                 description = description.encode('utf-8')
-                proc = Popen(['html2text'], stdin = PIPE, stdout = PIPE, stderr = sys.stderr)
-                description = proc.communicate(description)[0]
+                if ('FEATHERWEIGHT_RAW' not in os.environ) or (os.environ['FEATHERWEIGHT_RAW'].lower() not in ('1', 'y', 'yes')):
+                    proc = Popen(['html2text'], stdin = PIPE, stdout = PIPE, stderr = sys.stderr)
+                    description = proc.communicate(description)[0]
                 pager = os.environ['PAGER'] if 'PAGER' in os.environ else None
                 pager = None if pager == '' else pager
                 if pager is None:
