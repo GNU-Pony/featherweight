@@ -51,7 +51,7 @@ def flatten(feeds, rc = None):
             rc.append(feed)
             if 'inner' in feed:
                 flatten(feed['inner'], rc)
-        
+
 
 
 feeds = None
