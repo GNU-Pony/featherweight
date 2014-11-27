@@ -64,7 +64,7 @@ def load_feed(id):
         if os.access('%s/%s' % (root, id), os.F_OK):
             with open('%s/%s' % (root, id), 'rb') as file:
                 feed_info = file.read()
-            if os.access('%s/%s-content' % (root, id), os.F_OK)
+            if os.access('%s/%s-content' % (root, id), os.F_OK):
                 with open('%s/%s-content' % (root, id), 'rb') as file:
                     feed_data = file.read()
             unflock(feed_flock)
