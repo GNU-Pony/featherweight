@@ -76,7 +76,7 @@ def update_feed(feed, if_group, now = None):
                         bakdata = file.read()
                         with open('%s/%s-content.bak' % (root, id), 'rb') as bakfile:
                             bakfile.write(bakdata)
-                    old_data = eval(data.decode('utf-8', 'strict'))
+                    old_data = eval(bakdata.decode('utf-8', 'strict'))
                 else:
                     bakdata = None
                 for channel in feed_data:
