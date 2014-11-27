@@ -36,15 +36,15 @@ Navigation:
 	P        Go to the next unread leaf node
 	N        Go to the previous unread leaf node
 	p        Go to the previous unread leaf node
-	1	 Set the marked node's colour to red
-	2	 Set the marked node's colour to green
-	3	 Set the marked node's colour to yellow
-	4	 Set the marked node's colour to blue
-	5	 Set the marked node's colour to magenta
-	6	 Set the marked node's colour to cyan
-	7	 Set the marked node's colour to white
-	8	 Set the marked node's colour to black
-	0	 Set the marked node's colour to the default colour
+	1        Set the marked node's colour to red
+	2        Set the marked node's colour to green
+	3        Set the marked node's colour to yellow
+	4        Set the marked node's colour to blue
+	5        Set the marked node's colour to magenta
+	6        Set the marked node's colour to cyan
+	7        Set the marked node's colour to white
+	8        Set the marked node's colour to black
+	0        Set the marked node's colour to the default colour
 	
 	The mouse works in xterm-compatible terminals, double click to open a node.
 
