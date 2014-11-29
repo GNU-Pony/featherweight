@@ -39,6 +39,8 @@ def update_feed(feed, if_group, now = None):
         now = time.gmtime()
         now = [now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec]
     if 'inner' in feed:
+        if feed['group'] == if_group:
+            if_group = None
         for feed in feed['inner']:
             update_feed(feed, if_group, now)
     elif ((if_group is None) or (feed['group'] == if_group)) and ('url' in feed) and (feed['url'] is not None):
