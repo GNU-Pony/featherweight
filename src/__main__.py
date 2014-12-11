@@ -36,6 +36,7 @@ args = sys.argv[1:]
 status = '--status' in args
 update = '--update' in args
 system = '--system' in args
+repair = '--repair' in args
 
 
 if not os.path.exists(root):
@@ -63,7 +64,7 @@ with touch('%s/feeds' % root) as feeds_flock:
     unflock(feeds_flock)
     feeds = feeds.decode('utf-8', 'strict')
     feeds = [] if len(feeds) == 0 else eval(feeds)
-    if update or status:
+    if update or repair or status:
         group = None
         for arg in args:
             if not arg.startswith('-'):
@@ -90,6 +91,47 @@ with touch('%s/feeds' % root) as feeds_flock:
                 file.write(data)
             with open('%s/status' % root, 'wb') as file:
                 file.write(status_data)
+            unflock(feeds_flock)
+        if repair:
+            flock(feeds_flock, True, _('Feed database is locked by another process, waiting...'))
+            flat_feeds = flatten(feeds)
+            new_status = 0
+            for feed in flat_feeds:
+                pathname = '%s/%s' % (root, feed['id'])
+                if not os.access(pathname, os.F_OK):
+                    continue
+                with open(pathname, 'rb') as file:
+                    flock(file, False, _('The feed is locked by another process, waiting...'))
+                    feed_info = file.read()
+                    with open('%s.bak' % pathname, 'wb') as bakfile:
+                        bakfile.write(feed_info)
+                    feed_info = feed_info.decode('utf-8', 'strict')
+                    feed_info = eval(feed_info) if len(feed_info) > 0 else {}
+                    have   = set() if 'have'   not in feed_info else feed_info['have']
+                    unread = set() if 'unread' not in feed_info else feed_info['unread']
+                    feed_info['have'] = have
+                    feed_info['unread'] = unread
+                    for unread_entry in list(unread):
+                        if unread_entry not in have:
+                            del unread[unread_entry]
+                    feed['new'] = len(unread)
+                    new_status += len(unread)
+                    feed_info = repr(feed_info).encode('utf-8')
+                    try:
+                        with open(pathname, 'wb') as mewfile:
+                            mewfile.write(feed_info)
+                        unflock(file)
+                    except Exception as err:
+                        unflock(file)
+                        pathname = abbr(root) + pathname[len(root):]
+                        print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % (pathname, pathname))
+                        raise err
+            new_status = ('%i\n' % new_status).encode('utf-8')
+            updated = repr(feeds).encode('utf-8')
+            with open('%s/feeds' % root, 'wb') as file:
+                file.write(updated)
+            with open('%s/status' % root, 'wb') as file:
+                file.write(new_status)
             unflock(feeds_flock)
         if status:
             if group is not None:

@@ -75,7 +75,7 @@ background.
 @node Invoking
 @chapter Invoking
 
-@command{featherweight} recognises three options:
+@command{featherweight} recognises four options:
 
 @table @option
 @item --update
@@ -83,6 +83,13 @@ Fetch the latests news.
 
 @item --status
 Print the number of unread news.
+
+@item --repair
+Attempt to repair errors in the feed database,
+including (and limited to): unsynchronised total
+of unread feed entries, unsynchronised number
+of unread feed entries in a feed, that is,
+feed entries marked as unread but not as existing.
 
 @item --system
 Causes @command{featherweight} to not be interactive.
