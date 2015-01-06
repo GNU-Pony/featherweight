@@ -124,7 +124,7 @@ You also use
 flock -x ~/.var/lib/featherweight/feeds \
       -c 'cat ~/.var/lib/featherweight/status'
 @end example
-but that appears to be have as fast as to long version.
+but that appears to be slower than the long version.
 
 @command{featherweight --update} can be used to fetch the
 latest news and then open the news reader.
