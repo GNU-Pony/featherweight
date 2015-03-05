@@ -30,7 +30,7 @@ from trees import *
 
 MONTHS = { 1 : 'January',
            2 : 'February',
-           3 : 'Marsh',
+           3 : 'March',
            4 : 'April',
            5 : 'May',
            6 : 'June',
