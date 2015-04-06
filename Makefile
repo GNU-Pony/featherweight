@@ -88,30 +88,30 @@ doc: info pdf dvi ps
 .PHONY: info
 info: bin/featherweight.info
 bin/%.info: info/%.texinfo info/fdl.texinfo
-	@mkdir -p obj bin
-	cd obj ; makeinfo ../$<
-	mv obj/$*.info bin/$*.info
+	@mkdir -p obj/info bin
+	cd obj/info ; makeinfo ../../$<
+	mv obj/info/$*.info bin/$*.info
 
 .PHONY: pdf
 pdf: bin/featherweight.pdf
 bin/%.pdf: info/%.texinfo info/fdl.texinfo
-	@mkdir -p obj bin
-	cd obj ; yes X | texi2pdf ../$<
-	mv obj/$*.pdf bin/$*.pdf
+	@mkdir -p obj/pdf bin
+	cd obj/pdf ; yes X | texi2pdf ../../$<
+	mv obj/pdf/$*.pdf bin/$*.pdf
 
 .PHONY: dvi
 dvi: bin/featherweight.dvi
 bin/%.dvi: info/%.texinfo info/fdl.texinfo
-	@mkdir -p obj bin
-	cd obj ; yes X | $(TEXI2DVI) ../$<
-	mv obj/$*.dvi bin/$*.dvi
+	@mkdir -p obj/dvi bin
+	cd obj/dvi ; yes X | $(TEXI2DVI) ../../$<
+	mv obj/dvi/$*.dvi bin/$*.dvi
 
 .PHONY: ps
 ps: bin/featherweight.ps
 bin/%.ps: info/%.texinfo info/fdl.texinfo
-	@mkdir -p obj bin
-	cd obj ; yes X | texi2pdf --ps ../$<
-	mv obj/$*.ps bin/$*.ps
+	@mkdir -p obj/ps bin
+	cd obj/ps ; yes X | texi2pdf --ps ../../$<
+	mv obj/ps/$*.ps bin/$*.ps
 
 
 
