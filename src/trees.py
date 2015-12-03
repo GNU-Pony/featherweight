@@ -145,7 +145,7 @@ class Tree():
     @variable  lineoff:int                         The index of the first visible line
     @variable  draw_force:bool                     Do I need to redraw the screen?
     @variable  draw_line:int                       The current line on the screen
-    @variable  last_select:Tree?                   - TODO
+    @variable  last_select:Tree?                   The previously selected node.
     @variable  redraw_root:bool                    Do I need to redraw the root?
     '''
     
@@ -312,24 +312,31 @@ class Tree():
         '''
         global height, width
         
+        # Reset line pointers.
         self.line = 0
         self.curline = 0
+        
+        # Get the size of the terminal.
         height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
         (height, width) = height_width.decode('utf-8', 'strict')[:-1].split(' ')
         height, width = int(height), int(width)
         
+        # TODO
         if self.last_select is not self.select_stack[-1][0]:
             if self.last_select is not None:
                 self.last_select['draw_line'] = -1
             if self.select_stack[-1][0] is not None:
                 self.select_stack[-1][0]['draw_line'] = -1
         
+        # Go to top of screen, clear if redrawing.
         print('\033[H', end = '')
         if self.draw_force:
             print('\033[2J', end = '')
+        # Ge the title of the root, and selection highlight colour.
         title = self.root
         if len(self.select_stack) == 1:
             title = '\033[01;34m%s\033[00m' % title
+        # Draw the root.
         root, self.redraw_root = self.redraw_root, False
         if root or self.lineoff <= self.curline < self.lineoff + height:
             if root or self.draw_force or ((self.last_select is not None) == (self.select_stack[-1][0] is None)):
@@ -339,17 +346,22 @@ class Tree():
                 print(title, end = '')
         self.line += 1
         self.curline += 1
+        # TODO
         if len(self.select_stack) == 1:
             self.line = ~self.line
         self.draw_line = 1
+        # Draw children.
         for feed in self.feeds:
             self.print_node(feed, feed is self.feeds[-1], '', self.draw_force)
+        # Clear the rest of the screen, there is nothing there.
         if self.draw_line < height:
             print('\n\033[J', end = '')
         sys.stdout.flush()
         
+        # Remember which node is selected.
         self.last_select = self.select_stack[-1][0]
         
+        # TODO
         self.line = ~self.line
         if not (self.lineoff < self.line <= self.lineoff + height):
             self.draw_force = True
@@ -360,6 +372,7 @@ class Tree():
                 self.lineoff = 0
             self.print_tree()
         
+        # Forced redraw has been applied (if it was requeted.)
         self.draw_force = False
     
     
