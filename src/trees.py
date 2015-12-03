@@ -132,6 +132,21 @@ def update_node_newness(trees, node_id, mod):
 class Tree():
     '''
     Feed tree class
+    
+    @variable  root:str                            The title of the root
+    @variable  feeds:itr<dict<str, _|itr<↑>>>      Feeds
+    @variable  islinux:bool                        Running in Linux VT? This is useful for selecting the
+                                                   best characters, as Linux VT has a limited character set.
+    @variable  count:int                           The number of new items
+    @variable  select_stack:list<(:Tree?, :int?)>  Stack of selected nodes, object and index
+    @variable  collapsed_count:int                 The number of collapsed branches
+    @variable  line:int                            - TODO
+    @variable  curline:int                         The current line in the tree
+    @variable  lineoff:int                         The index of the first visible line
+    @variable  draw_force:bool                     Do I need to redraw the screen?
+    @variable  draw_line:int                       The current line on the screen
+    @variable  last_select:Tree?                   - TODO
+    @variable  redraw_root:bool                    Do I need to redraw the root?
     '''
     
     def __init__(self, root, feeds):
@@ -152,6 +167,7 @@ class Tree():
         self.select_stack = [(None, None)]
         self.collapsed_count = 0
         
+        # Collapes all branches.
         def autocollapse(feed):
             if 'inner' in feed:
                 if ('new' not in feed) or (feed['new'] == 0):
@@ -160,6 +176,7 @@ class Tree():
                 [autocollapse(feed) for feed in feed['inner']]
         [autocollapse(feed) for feed in feeds]
         
+        # Get size of terminal.
         height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
         (height, width) = height_width.decode('utf-8', 'strict')[:-1].split(' ')
         height, width = int(height), int(width)
@@ -225,21 +242,32 @@ class Tree():
         @param   force:bool                        Whether to print even if marked as printed
         '''
         global height, width
+        
+        # What is the title on the node?
         title = feed['title']
+        
+        # Is the node a collapsed branch?
+        collapsed = ('inner' in feed) and not Tree.is_expanded(feed)
+        
+        # What should be printed at the beginning of the line to make it look like a tree?
         prefix = indent + ('└' if last else '├')
-        collapsed = False
-        if ('inner' not in feed) or (Tree.is_expanded(feed)):
-            prefix += '── ' if self.islinux else '─╼ '
-        else:
-            collapsed = True
+        if collapsed:
             prefix += '─┘ ' if self.islinux else '─┚ '
+        else:
+            prefix += '── ' if self.islinux else '─╼ '
+        
+        # Anything new in the node?
         has_new = ('new' in feed) and (feed['new'] > 0)
         if has_new:
             prefix += '\033[01;31m(%i)\033[00m ' % feed['new']
+        
+        # Truncate title if it is too long.
         prefixlen = len('%s--- %s' % (indent, ('(%i) ' % feed['new']) if has_new else ''))
         if prefixlen + len(title) > width:
             if width - prefixlen - 3 >= 0:
-                title = title[: width - prefixlen - 3] + '...'
+                title = title[:width - prefixlen - 3] + '...'
+        
+        # Get the colour, and selection highlight, for the node.
         if 'colour' in feed:
             if self.select_stack[-1][0] is feed:
                 title = '\033[01;3%im%s\033[00m' % (feed['colour'], title)
@@ -247,6 +275,8 @@ class Tree():
                 title = '\033[3%im%s\033[00m' % (feed['colour'], title)
         elif self.select_stack[-1][0] is feed:
             title = '\033[01;34m%s\033[00m' % title
+        
+        # Draw the node.
         if self.lineoff <= self.curline < self.lineoff + height:
             if self.curline > self.lineoff:
                 print()
@@ -257,10 +287,14 @@ class Tree():
         else:
             feed['draw_line'] = -1
         self.curline += 1
+        
+        # TODO doc
         if self.line >= 0:
             self.line += 1
             if self.select_stack[-1][0] is feed:
                 self.line = ~self.line
+        
+        # Draw children.
         if 'inner' in feed:
             if collapsed:
                 feed['draw_expanded'] = False
@@ -277,6 +311,7 @@ class Tree():
         Print the entire tree
         '''
         global height, width
+        
         self.line = 0
         self.curline = 0
         height_width = Popen('stty size'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
