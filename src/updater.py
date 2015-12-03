@@ -26,6 +26,63 @@ from parser import *
 
 
 
+def save_file(filename, backup, datafun):
+    '''
+    Save data to a file, but retry to restore it one failure
+    
+    @param  filename:str    The path of the file
+    @param  backup:bytes?   The old content of the file
+    @param  datafun:()→str  Nullary functional that evaluates to the new content
+    '''
+    # Store new data.
+    try:
+        with open(filename, 'wb') as file:
+            file.write(datafun())
+    except Exception as err:
+	# Try to restore old file on error.
+        try:
+            if backup is not None:
+                with open(filename, 'wb') as file:
+                    file.write(backup)
+        except:
+            pass
+        raise err
+
+
+def make_backup(filename):
+    '''
+    Backup a file and return its content
+    
+    @param   filename:str  The path of the file
+    @return  :bytes        The content of the file
+    '''
+    backup = None
+    if os.access(filename, os.F_OK):
+        with open(filename, 'rb') as file:
+            backup = file.read()
+            with open(filename + '.bak', 'wb') as bakfile:
+                bakfile.write(backup)
+    return backup
+
+
+def fetch_file(url):
+    '''
+    Fetches a files, local or remote
+    
+    @param   url:str  The URL of the file
+    @retrun  :str     The content of the file
+    '''
+    data = None
+    if url.startswith('file://'):
+        url = url[len('file://'):]
+        if os.access(url, os.F_OK):
+            with open(url, 'rb') as file:
+                data = file.read().decode('utf-8', 'strict')
+    else:
+        data = Popen(['wget', url, '-O', '-'], stdout = PIPE).communicate()[0]
+    return data
+
+
 def update_feed(feed, if_group, now = None):
     '''
     Update a feed and its subfeeds
@@ -35,93 +92,99 @@ def update_feed(feed, if_group, now = None):
                                           for it to be updated, `None` to update everything
     @param  now:tuple(int)?               The current time, intended for internal use
     '''
+    # Get the current time.
     if now is None:
         now = time.gmtime()
         now = [now.tm_year, now.tm_mon, now.tm_mday, now.tm_hour, now.tm_min, now.tm_sec]
+    
+    # Update node.
     if 'inner' in feed:
+        # This is a branch.
+        
+        # If the node is in the group, all its children are too.
         if feed['group'] == if_group:
             if_group = None
+        
+        # Update all children.
         for feed in feed['inner']:
             update_feed(feed, if_group, now)
+        
     elif ((if_group is None) or (feed['group'] == if_group)) and ('url' in feed) and (feed['url'] is not None):
+        # This is a leaf, it has an url, and is no the selected group.
+        
+        # Get the ID if the node.
         id = feed['id']
-        with touch('%s/%s' % (root, id)) as feed_flock:
+        
+        # Get pathnames.
+        metafile = '%s/%s' % (root, id)
+        datafile = '%s/%s-content' % (root, id)
+        
+        # Acquire feed...
+        with touch(metafile) as feed_flock:
+            # ... and update.
+            
+            # Lock the feed file for writing.
             flock(feed_flock, True)
+            
+            # Load feed metadata.
             feed_info = None
-            with open('%s/%s' % (root, id), 'rb') as file:
+            with open(metafile, 'rb') as file:
                 feed_info = file.read().decode('utf-8', 'strict')
             feed_info = eval(feed_info) if len(feed_info) > 0 else {}
+            
+            # Default missing metadata.
             if 'have' not in feed_info:
                 feed_info['have'] = set()
             if 'unread' not in feed_info:
                 feed_info['unread'] = set()
             if 'url' not in feed_info:
                 feed_info['url'] = feed['url']
+            
+            # Fetch metadata.
             have = feed_info['have']
             unread = feed_info['unread']
             url = feed_info['url']
             updated = True
             
+            # Update content.
             try:
-                feed_data = None
-                if url.startswith('file://'):
-                    url = url[len('file://'):]
-                    if os.access(url, os.F_OK):
-                        with open(url, 'rb') as feed_file:
-                            feed_data = feed_file.read().decode('utf-8', 'strict')
-                else:
-                    feed_data = Popen(['wget', url, '-O', '-'], stdout = PIPE).communicate()[0]
+                # Fetch feed.
+                feed_data = fetch_file(url)
                 feed_data = [] if feed_data is None else parse_feed(feed_data)
-                old_data = []
-                if os.access('%s/%s-content' % (root, id), os.F_OK):
-                    with open('%s/%s-content' % (root, id), 'rb') as file:
-                        bakdata = file.read()
-                        with open('%s/%s-content.bak' % (root, id), 'wb') as bakfile:
-                            bakfile.write(bakdata)
-                    old_data = eval(bakdata.decode('utf-8', 'strict'))
-                else:
-                    bakdata = None
+                
+                # Create backup, and parse content.
+                bakdata = make_backup(datafile)
+                content = [] if bakdata is None else eval(bakdata.decode('utf-8', 'strict'))
+                
+                # Find new articles.
                 for channel in feed_data:
                     for item in channel['items']:
                         if 'guid' not in item:
+                            # Default GUID to the link, if missing.
                             item['guid'] = item['link' if 'link' in item else 'title']
                         guid = item['guid']
                         if guid not in have:
+                            # Article is new, remember that/it.
                             unread.add(guid)
                             have.add(guid)
-                            old_data.append(item)
+                            content.append(item)
+                            # Default publication time to retrieval, if missing.
                             if 'pubdate' not in item:
                                 item['pubdate'] = now
-                try:
-                    with open('%s/%s-content' % (root, id), 'wb') as file:
-                        file.write(repr(old_data).encode('utf-8'))
-                except Exception as err:
-                    try:
-                        if bakdata is not None:
-                            with open('%s/%s-content' % (root, id), 'wb') as bakfile:
-                                bakfile.write(bakdata)
-                    except:
-                        pass
-                    raise err
+                
+                # Update content file.
+                save_file(datafile, bakdata, lambda : repr(content).encode('utf-8'))
             except:
                 updated = False
             
+            # Update metadata.
             if updated:
-                if os.access('%s/%s' % (root, id), os.F_OK):
-                    with open('%s/%s' % (root, id), 'rb') as file:
-                        bakdata = file.read()
-                        with open('%s/%s.bak' % (root, id), 'wb') as bakfile:
-                            bakfile.write(bakdata)
-                try:
-                    with open('%s/%s' % (root, id), 'wb') as file:
-                        file.write(repr(feed_info).encode('utf-8'))
-                except Exception as err:
-                    try:
-                        with open('%s/%s' % (root, id), 'wb') as file:
-                            file.write(bakdata)
-                    except:
-                        pass
-                    raise err
+                # Update metadata file.
+                bakdata = make_backup(metafile)
+                save_file(metafile, bakdata, lambda : repr(feed_info).encode('utf-8'));
+                # Update new-articles counter.
                 feed['new'] = len(unread)
+            
+            # Release lock over file, we are done here.
             unflock(feed_flock)
 
