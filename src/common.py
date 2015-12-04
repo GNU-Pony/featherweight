@@ -78,15 +78,16 @@ terminated = False
 '''
 
 
-def make_backup(filename):
+def make_backup(filename, if_exists = True):
     '''
     Backup a file and return its content
     
-    @param   filename:str  The path of the file
-    @return  :bytes        The content of the file
+    @param   filename:str    The path of the file
+    @param   if_exists:bool  Do nothing if the file does not exist?
+    @return  :bytes?         The content of the file
     '''
     backup = None
-    if os.access(filename, os.F_OK):
+    if (not if_exists) or os.access(filename, os.F_OK):
         with open(filename, 'rb') as file:
             backup = file.read()
             with open(filename + '.bak', 'wb') as bakfile:
@@ -124,9 +125,10 @@ def save_file_or_die(filename, raise_error, datafun):
     The error message assumes that there is a backup
     at `filename + '.bak'`
     
-    @param  filename:str      The path of the file
-    @param  raise_error:bool  Should an error be raised on error?
-    @param  datafun:()→str    Nullary functional that evaluates to the new content
+    @param   filename:str      The path of the file
+    @param   raise_error:bool  Should an error be raised on error?
+    @param   datafun:()→str    Nullary functional that evaluates to the new content
+    @return  :bool             Successful?
     '''
     global terminated, old_stty, root
     try:
@@ -140,4 +142,6 @@ def save_file_or_die(filename, raise_error, datafun):
         terminated = True
         if raise_error:
             raise err
+        return False
+    return True
 

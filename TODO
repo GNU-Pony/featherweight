@@ -2,3 +2,4 @@ Do not use html2text, it sucks.
 --repair correct the colour.
 --repair should repair any damage or missing element.
 Improve performance for feeds with vast number of news.
+Compression of old articles, in groups.

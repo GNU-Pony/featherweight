@@ -32,18 +32,48 @@ from updater import *
 from feeds import *
 
 
+
 args = sys.argv[1:]
+'''
+:itr<str>  Command line arguments, excluding the name of the process.
+'''
+
+
 status = '--status' in args
+'''
+:bool  Print the number of unread news?
+'''
+
 update = '--update' in args
+'''
+:bool  Fetch the latest news?
+'''
+
 system = '--system' in args
+'''
+:bool  Do not open interactive session?
+'''
+
 repair = '--repair' in args
+'''
+:bool  Repair errors in the feed database?
+'''
 
 
+# Ensure the existance of the directory for data files.
 if not os.path.exists(root):
     os.makedirs(root)
 
 
+
 def flatten(feeds, rc = None):
+    '''
+    Return all list of all nodes
+    
+    @param   feeds:itr<dict<str, _|↑>>  List of trees
+    @param   rc:list<dict<str, _|↑>>?   List to populate and return; for method internal use
+    @return  :list<dict<str, _|↑>>      List of all nodes
+    '''
     if rc is None:
         rc = []
         flatten(feeds, rc)
@@ -55,43 +85,74 @@ def flatten(feeds, rc = None):
                 flatten(feed['inner'], rc)
 
 
+def save_feeds_and_status(feeds, status):
+    '''
+    Save feed list file and new-article-count file
+    
+    @param  feeds:itr<dict<str, _|↑>>  The feeds
+    @param  status:int                 The number of unread articles
+    '''
+    # Format data to store in files.
+    feeds = repr(feeds).encode('utf-8')
+    status = ('%i\n' % status).encode('utf-8')
+    # Update the feed list file.
+    with open('%s/feeds' % root, 'wb') as file:
+        file.write(feeds)
+    # Create a backup of it too.
+    with open('%s/feeds.bak' % root, 'wb') as file:
+        file.write(feeds)
+    # Update file with new-article count.
+    # This must be done only whilst the feed-list file is locked.
+    with open('%s/status' % root, 'wb') as file:
+        file.write(status)
 
+
+# Load feeds, and possiblity do more with it.
 feeds = None
 with touch('%s/feeds' % root) as feeds_flock:
+    # Read file, with a lock on it as short as possible.
     flock(feeds_flock, False, _('Feed database is locked by another process, waiting...'))
     with open('%s/feeds' % root, 'rb') as file:
         feeds = file.read()
     unflock(feeds_flock)
+    # Decode and parse file.
     feeds = feeds.decode('utf-8', 'strict')
     feeds = [] if len(feeds) == 0 else eval(feeds)
+    # --update, --repair, --status
     if update or repair or status:
+        # Get affected group.
         group = None
         for arg in args:
             if not arg.startswith('-'):
                 group = arg
                 break
+        ### --update (fetch new articles) ###
         if update:
-            old = dict((feed['id'], feed['new']) for feed in flatten(feeds))
+            # Create map from ID to new-article count.
+            old_counts = dict((feed['id'], feed['new']) for feed in flatten(feeds))
+            # Fetch new articles.
             for feed in feeds:
                 update_feed(feed, group)
+            # Lock the feed-list file for writing.
             flock(feeds_flock, True, _('Feed database is locked by another process, waiting...'))
+            # Create list of ID–new-article count-pairs, with new counts.
             new = [(feed['id'], feed['new']) for feed in flatten(feeds)]
+            # Re-read feed list file to avoid race conditions with other processes.
             with open('%s/feeds' % root, 'rb') as file:
                 feeds = file.read()
             feeds = feeds.decode('utf-8', 'strict')
             feeds = [] if len(feeds) == 0 else eval(feeds)
+            # Increase new-article counts with how much we increased it would.
+            # (Remember than another process may have updated it too.)
             flat_feeds = dict((feed['id'], feed) for feed in flatten(feeds))
             for id, new_value in new:
                 if id in flat_feeds.keys():
-                    flat_feeds[id]['new'] += new_value - old[id]
-            updated = repr(feeds)
-            data = updated.encode('utf-8')
-            status_data = ('%i\n' % Tree.count_new(feeds)).encode('utf-8')
-            with open('%s/feeds' % root, 'wb') as file:
-                file.write(data)
-            with open('%s/status' % root, 'wb') as file:
-                file.write(status_data)
+                    flat_feeds[id]['new'] += new_value - old_counts[id]
+            # Save updates.
+            save_feeds_and_status(feeds, Tree.count_new(feeds))
+            # We are done, unlock the file.
             unflock(feeds_flock)
+        ### --repair (repair damages) ###
         if repair:
             flock(feeds_flock, True, _('Feed database is locked by another process, waiting...'))
             flat_feeds = flatten(feeds)
@@ -126,14 +187,13 @@ with touch('%s/feeds' % root) as feeds_flock:
                         pathname = abbr(root) + pathname[len(root):]
                         print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % (pathname, pathname))
                         raise err
-            new_status = ('%i\n' % new_status).encode('utf-8')
-            updated = repr(feeds).encode('utf-8')
-            with open('%s/feeds' % root, 'wb') as file:
-                file.write(updated)
-            with open('%s/status' % root, 'wb') as file:
-                file.write(new_status)
+            # Save changes.
+            save_feeds_and_status(feeds, new_status)
+            # We are done, unlock the file.
             unflock(feeds_flock)
+        ### --status (report new-article count) ###
         if status:
+            # If a group is specified, count only in that group.
             if group is not None:
                 def get_status(feeds, in_group):
                     global group
@@ -146,7 +206,9 @@ with touch('%s/feeds' % root) as feeds_flock:
                             count += feed['new']
                     return count
                 print(get_status(feeds, False))
+            # Otherwise, use status file.
             elif not os.access('%s/status' % root, os.F_OK):
+                # New-article count is zero if it does not exist.
                 print('0')
             else:
                 flock(feeds_flock, False)
@@ -156,10 +218,14 @@ with touch('%s/feeds' % root) as feeds_flock:
                 unflock(feeds_flock)
 
 
+# We are done, if no interactive session is wanted.
 if system:
     sys.exit(0)
 
 
+# Configure the terminal to clear restore itself when we exit,
+# not display the text cursor, report mouse clicks events,
+# not echo types keys, do use direct instead of buffered input.
 old_stty = Popen('stty --save'.split(' '), stdout = PIPE, stderr = PIPE).communicate()[0]
 old_stty = old_stty.decode('utf-8', 'strict')[:-1]
 Popen('stty -icanon -echo'.split(' '), stdout = PIPE, stderr = PIPE).communicate()
@@ -168,38 +234,31 @@ print('\033[?1049h\033[?25l\033[?9h', end = '', flush = True)
 
 
 def update_feeds(function):
-    global terminated
+    '''
+    Make changes to the feeds and save them asynchronously (and a separate process)
+    
+    @param  function:(feeds:itr<dict<str, _|↑>>)→void  Function that modifies the feeds
+    '''
+    # Make changes.
     function(feeds)
+    # Update new article counts.
     Tree.count_new(feeds)
-    with touch('%s/feeds' % root) as feeds_flock:
+    # Save changes.
+    pathname = '%s/feeds' % root
+    with touch(pathname) as feeds_flock:
         pid = flock_fork(feeds_flock)
         if pid == 0:
             return
-        _feeds = None
-        with open('%s/feeds' % root, 'rb') as file:
-            _feeds = file.read()
-            with open('%s/feeds.bak' % root, 'wb') as bakfile:
-                bakfile.write(_feeds)
-            _feeds = _feeds.decode('utf-8', 'strict')
-        _feeds = [] if len(_feeds) == 0 else eval(_feeds)
-        function(_feeds)
-        status = Tree.count_new(_feeds)
-        _feeds = repr(_feeds)
-        try:
-            with open('%s/feeds' % root, 'wb') as file:
-                file.write(_feeds.encode('utf-8'))
+        feeds_ = make_backup(pathname, False).decode('utf-8', 'strict')
+        feeds_ = [] if len(feeds_) == 0 else eval(feeds_)
+        function(feeds_)
+        if save_file_or_die(pathname, pid is None, lambda : repr(feeds)_.encode('utf-8')):
             try:
+                status = Tree.count_new(feeds_)
                 with open('%s/status' % root, 'wb') as file:
                     file.write(('%i\n' % status).encode('utf-8'))
             except:
                 pass
-        except Exception as err:
-            Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
-            print('\n\033[?9l\033[?25h\033[?1049l' if pid is None else '\n', end = '', flush = True)
-            print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % ('%s/feeds' % abbr(root), '%s/feeds' % abbr(root)))
-            terminated = True
-            if pid is None:
-                raise err
         unflock_fork(feeds_flock, pid)
 
 
@@ -391,9 +450,11 @@ try:
             update_feeds(lambda t : update_node(t, node['id'], {'colour' : action}))
             node['draw_line'] = -1
 
+# Error?
 except Exception as err:
     raise err
     pass
+# Terminal not already restored? Restore it.
 finally:
     if not terminated:
         Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
