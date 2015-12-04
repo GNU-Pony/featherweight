@@ -84,6 +84,11 @@ terminated = False
 :bool  Exiting?
 '''
 
+old_stty = None
+'''
+:str  `stty`-stored terminal configurations
+'''
+
 
 def make_backup(filename, if_exists = True):
     '''
@@ -112,8 +117,9 @@ def save_file(filename, backup, datafun):
     '''
     # Store new data.
     try:
+        data = datafun()
         with open(filename, 'wb') as file:
-            file.write(datafun())
+            file.write(data)
     except Exception as err:
 	# Try to restore old file on error.
         try:
@@ -139,8 +145,9 @@ def save_file_or_die(filename, raise_error, datafun):
     '''
     global terminated, old_stty, root
     try:
+        data = datafun()
         with open(filename, 'wb') as file:
-            file.write(feed_info)
+            file.write(data)
     except Exception as err:
         Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
         print('\n\033[?9l\033[?25h\033[?1049l' if pid is None else '\n', end = '', flush = True)
