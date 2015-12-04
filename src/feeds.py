@@ -68,6 +68,7 @@ def load_feed(id):
     years = {}
     have, unread = set(), set()
     with touch('%s/%s' % (root, id)) as feed_flock:
+        # Read files.
         flock(feed_flock, False, _('The feed is locked by another process, waiting...'))
         feed_info, feed_data = None, None
         if os.access('%s/%s' % (root, id), os.F_OK):
@@ -78,22 +79,27 @@ def load_feed(id):
                     feed_data = file.read()
             unflock(feed_flock)
         
+        # Decode and parse metadata file.
         feed_info = feed_info.decode('utf-8', 'strict')
         feed_info = eval(feed_info) if len(feed_info) > 0 else {}
         have   = set() if 'have'   not in feed_info else feed_info['have']
         unread = set() if 'unread' not in feed_info else feed_info['unread']
         
+        # Construct tree.
         if feed_data is not None:
             feed_data = eval(feed_data.decode('utf-8', 'strict'))
             for entry in feed_data:
-                entry['new'] = 1 if entry['guid'] in unread else 0
-                pubdate = entry['pubdate']
                 entry['id'] = entry['guid']
+                # Set new-article-count on the article itself.
+                entry['new'] = 1 if entry['guid'] in unread else 0
+                # Get publication/retrieval time.
+                pubdate = entry['pubdate']
+                entry['time'] = (pubdate[3] * 60 + pubdate[4]) * 100 + pubdate[5]
+                # Get title.
                 entry['realtitle'] = entry['title']
                 title = entry['title'].split('\n')[0]
                 entry['title'] = '(%02i:%02i:%02i) %s' % (pubdate[3], pubdate[4], pubdate[5], title)
-                entry['time'] = (pubdate[3] * 60 + pubdate[4]) * 100 + pubdate[5]
-                colour = entry['colour'] if 'colour' in entry else ...
+                # Year branch.
                 if pubdate[0] not in years:
                     year_entry = {}
                     years[pubdate[0]] = year_entry
@@ -103,6 +109,7 @@ def load_feed(id):
                     year_entry['inner'] = []
                     year_entry['id'] = next_id
                     next_id += 1
+                # Month branch.
                 months = years[pubdate[0]]
                 if pubdate[1] not in months:
                     month_entry = {}
@@ -114,6 +121,7 @@ def load_feed(id):
                     month_entry['inner'] = []
                     month_entry['id'] = next_id
                     next_id += 1
+                # Day branch.
                 days = months[pubdate[1]]
                 if pubdate[2] not in days:
                     day_entry = {}
@@ -128,8 +136,11 @@ def load_feed(id):
                     day_entry['inner'] = []
                     day_entry['id'] = next_id
                     next_id += 1
+                # Add article to day branch.
                 days[pubdate[2]]['inner'].append(entry)
+                # Colour nodes.
                 ancestors = [year_entry, month_entry, day_entry]
+                colour = entry['colour'] if 'colour' in entry else ...
                 colour_propagation(ancestors, colour, None)
     
     # Sort the tree.
@@ -504,6 +515,14 @@ def open_feed(feed_node, callback):
 
 
 def colour_propagation(ancestors, colour, old_colour):
+    '''
+    Propagation colours
+    
+    @param  ancestors:list<dict<str, _|int>>  List of ancestors, in left-to-right order
+    @param  colour:...|int                    The new colour, `...` for uncolouring
+    @param  old_colour:...|int?               The old colour, `...' for no colour,
+                                              `None` if not known yet
+    '''
     if (old_colour is not None) or (not colour == ...):
         for ancestor in reversed(ancestors):
             if 'colours' not in ancestor:
