@@ -631,7 +631,33 @@ class Tree():
                         self.select_stack.append((cur['inner'][0], 0))
                         self.print_tree()
             
-            # TODO C-right: go to first leaf if in branch
+            # C-right
+            elif buf.endswith('\033[1;5C'):
+                # Go to first node inside the branch.
+                stacksize = len(self.select_stack)
+                while True:
+                    # At root?
+                    if self.select_stack[-1][0] is None:
+                        # Go to first node.
+                        if len(self.feeds) > 0:
+                            self.select_stack.append((self.feeds[0], 0))
+                        else:
+                            break
+                    # Not at root?
+                    else:
+                        # Go to first child.
+                        (cur, curi) = self.select_stack[-1]
+                        if 'inner' in cur:
+                            if not Tree.is_expanded(cur):
+                                # Expand branch whence we came if collapsed.
+                                cur['expanded'] = True
+                                self.collapsed_count -= 1
+                            self.select_stack.append((cur['inner'][0], 0))
+                        else:
+                            break
+                # Redraw if we have moved.
+                if len(self.select_stack) != stacksize:
+                    self.print_tree()
             
             # Left.
             elif buf.endswith('\033[D'):

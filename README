@@ -28,6 +28,7 @@ Navigation:
 	C-down   Go to the next node with the same parent, or the next node of
 	         the nearest ancestor with a next node with the same parent
 	C-left   Go to the root
+	C-right  Go to the first leaf inside the marked node.
 	left     Go to the parent of the marked node
 	right    Go to the first of the marked node, expand if necessary
 	space    Collapse or expand the marked node, all nodes if at the root

@@ -288,6 +288,8 @@ Mark the next node with the same parent, or the next node of
 the nearest ancestor with a next node with the same parent.
 @item C-left
 Mark the root.
+@item C-right
+Mark the first leaf inside the marked node.
 @item left
 Mark the parent of the marked node.
 @item right
