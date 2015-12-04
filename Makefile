@@ -1,4 +1,4 @@
-# Copyright © 2013, 2014  Mattias Andrée (maandree@member.fsf.org)
+# Copyright © 2013, 2014, 2015  Mattias Andrée (maandree@member.fsf.org)
 # 
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -89,28 +89,28 @@ doc: info pdf dvi ps
 info: bin/featherweight.info
 bin/%.info: info/%.texinfo info/fdl.texinfo
 	@mkdir -p obj/info bin
-	cd obj/info ; makeinfo ../../$<
+	cd obj/info && makeinfo ../../$<
 	mv obj/info/$*.info bin/$*.info
 
 .PHONY: pdf
 pdf: bin/featherweight.pdf
 bin/%.pdf: info/%.texinfo info/fdl.texinfo
 	@mkdir -p obj/pdf bin
-	cd obj/pdf ; yes X | texi2pdf ../../$<
+	cd obj/pdf && yes X | texi2pdf ../../$< < /dev/null
 	mv obj/pdf/$*.pdf bin/$*.pdf
 
 .PHONY: dvi
 dvi: bin/featherweight.dvi
 bin/%.dvi: info/%.texinfo info/fdl.texinfo
 	@mkdir -p obj/dvi bin
-	cd obj/dvi ; yes X | $(TEXI2DVI) ../../$<
+	cd obj/dvi && yes X | $(TEXI2DVI) ../../$< < /dev/null
 	mv obj/dvi/$*.dvi bin/$*.dvi
 
 .PHONY: ps
 ps: bin/featherweight.ps
 bin/%.ps: info/%.texinfo info/fdl.texinfo
 	@mkdir -p obj/ps bin
-	cd obj/ps ; yes X | texi2pdf --ps ../../$<
+	cd obj/ps && yes X | texi2pdf --ps ../../$< < /dev/null
 	mv obj/ps/$*.ps bin/$*.ps
 
 
