@@ -427,47 +427,74 @@ class Tree():
                     y -= 33
                     if y < 0:
                         y += 256
-                    # TODO
+                    # Get clicked line in the tree. (Apply vision offset.)
                     line = self.lineoff + y
+                    # Get current node.
                     last = self.select_stack[-1][0]
+                    # Back up selection stack, and clear it.
                     backup = self.select_stack[:]
                     self.select_stack[:] = self.select_stack[:1]
+                    # We begin at the root, its line is 0.
                     tline = 0
+                    # Did not click root?
                     if line > 0:
+                        # Figure out which node was selected.
                         while tline != line:
+                            # At root?
                             if self.select_stack[-1][0] is None:
+                                # Visit the first node.
                                 if len(self.feeds) > 0:
                                     self.select_stack.append((self.feeds[0], 0))
                                     tline += 1
+                            # Not at root?
                             else:
                                 (cur, curi) = self.select_stack[-1]
+                                # At expanded branch?
                                 if ('inner' in cur) and Tree.is_expanded(cur):
+                                    # Visit first child.
                                     self.select_stack.append((cur['inner'][0], 0))
                                     tline += 1
+                                # At leaf or collapsed branch?
                                 else:
                                     has_next = False
+                                    # While there is more.
                                     while len(self.select_stack) > 1:
+                                        # Get parent.
                                         par = self.select_stack[-2][0]
                                         par = self.feeds if par is None else par['inner']
+                                        # We are no longer visiting the node.
                                         self.select_stack.pop()
+                                        # Is there another node in the branch?
                                         if curi + 1 < len(par):
+                                            # Visit it.
                                             self.select_stack.append((par[curi + 1], curi + 1))
                                             has_next = True
                                             break
+                                        # Otherwise, visit to parent.
                                         (cur, curi) = self.select_stack[-1]
+                                    # Stop the search if all nodes have been visited.
                                     if not has_next:
                                         break
+                                    # Otherwise, keep track on which line in the tree we are on.
                                     else:
                                         tline += 1
+                        # Found it?
                         if tline == line:
                             backup = None
+                    # Select root if the root was clicked.
                     else:
                         backup = None
+                    # Was a node clicked?
                     if backup is None:
+                        # Did the user click on the selected node. (Possibily a double click.)
                         if self.select_stack[-1][0] is last:
+                            # Expand it.
                             queued += ' ' if (last is None) or ('inner' in last) else '\n'
+                        # Otherwise...
                         else:
+                            # ... redraw the the retree.
                             self.print_tree()
+                    # Did no click on a node? Revert.
                     else:
                         self.select_stack[:] = backup
             
