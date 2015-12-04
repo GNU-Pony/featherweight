@@ -154,31 +154,41 @@ with touch('%s/feeds' % root) as feeds_flock:
             unflock(feeds_flock)
         ### --repair (repair damages) ###
         if repair:
+            # Lock the feed-list file for writing.
             flock(feeds_flock, True, _('Feed database is locked by another process, waiting...'))
-            flat_feeds = flatten(feeds)
+            # Recount new articles and repair feeds.
             new_status = 0
-            for feed in flat_feeds:
+            for feed in flatten(feeds):
                 pathname = '%s/%s' % (root, feed['id'])
+                # File does not exist? That just means that its too new.
                 if not os.access(pathname, os.F_OK):
                     continue
+                # Open feed channel file for reading.
                 with open(pathname, 'rb') as file:
+                    # Lock the feed file for reading, and read.
                     flock(file, False, _('The feed is locked by another process, waiting...'))
                     feed_info = file.read()
+                    # Back up the file.
                     with open('%s.bak' % pathname, 'wb') as bakfile:
                         bakfile.write(feed_info)
+                    # Decode and parse feed file.
                     feed_info = feed_info.decode('utf-8', 'strict')
                     feed_info = eval(feed_info) if len(feed_info) > 0 else {}
+                    # Get 'have'-set and 'unread'-set.
                     have   = set() if 'have'   not in feed_info else feed_info['have']
                     unread = set() if 'unread' not in feed_info else feed_info['unread']
                     feed_info['have'] = have
                     feed_info['unread'] = unread
+                    # unread ≔ unread ∖ ∁have.
                     for unread_entry in list(unread):
                         if unread_entry not in have:
                             del unread[unread_entry]
+                    # Store correct new-article count, and increment grand total.
                     feed['new'] = len(unread)
                     new_status += len(unread)
-                    feed_info = repr(feed_info).encode('utf-8')
+                    # Save repaired feed file.
                     try:
+                        feed_info = repr(feed_info).encode('utf-8')
                         with open(pathname, 'wb') as mewfile:
                             mewfile.write(feed_info)
                         unflock(file)
@@ -262,6 +272,7 @@ def update_feeds(function):
         unflock_fork(feeds_flock, pid)
 
 
+# Interactive session.
 try:
     tree = Tree('My Feeds', feeds)
     while True:
