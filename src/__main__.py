@@ -402,97 +402,141 @@ try:
             if node is None:
                 # Root is stationary.
                 continue
+            # Get parent node.
             parent = tree.select_stack[-2][0]
             id_p = None if parent is None else parent['id']
             parent = feeds if parent is None else parent['inner']
+            # Get the position of the selected node and its adjacent.
             nodei = tree.select_stack[-1][1]
             nodej = nodei + (-1 if action == 'up' else +1)
             if (nodei == 0) if action == 'up' else (nodei + 1 == len(parent)):
+                # Cannot move up if at beginning, or down if at end.
                 continue
             id_i, id_j = parent[nodei]['id'], parent[nodej]['id']
+            # We will have to redraw the swapped lines.
             parent[nodei]['draw_line'] = -1
             parent[nodej]['draw_line'] = -1
+            # Function for moving the node.
             def save(t, id_t = None):
+                # We need to search, because another process may have modified the tree.
+                # Visiting the parent?
                 if id_p == id_t:
+                    # Find positions of the selected node and its adjacent.
                     i_is = [i for i in range(len(t)) if t[i]['id'] == id_i]
                     j_is = [i for i in range(len(t)) if t[i]['id'] == id_j]
                     if (i_is == [nodei]) and (j_is == [nodej]):
+                        # Swap their positions.
                         t[nodei], t[nodej] = t[nodej], t[nodei]
                     return True
+                # Visit children.
                 else:
                     for child in t:
                         if 'inner' in child:
                             if save(child['inner'], child['id']):
                                 return True
+                # No luck.
                 return False
+            # Apply changes.
             update_feeds(save)
+            # Update selection stack.
             tree.select_stack[-1] = (parent[nodej], nodej)
-        # Move outward.
+        # Move outward (that is left.)
         elif action == 'out':
             if len(tree.select_stack) < 3:
                 # Root is stationary.                         (len(tree.select_stack) == 1)
                 # Cannot move into root, need another parent. (len(tree.select_stack) == 2)
                 continue
+            # Whither?
             parent = tree.select_stack[-2][0]
-            id_p, id_n = parent['id'], node['id']
+            id_p = parent['id'],
+            # Whence?
+            id_n = node['id']
+            # Function for moving the node.
             def save(t, id_t = None, t_i = None, p = None):
+                # We need to search, because another process may have modified the tree.
+                # Visiting the parent?
                 if id_p == id_t:
+                    # Find position of selected node.
                     n_is = [i for i in range(len(t)) if t[i]['id'] == id_n]
                     if len(n_is) == 1:
                         n_i = n_is[0]
+                        # Move the node.
                         p.insert(t_i, t[n_i])
                         del t[n_i]
+                        # Mark the parent as a leaf if it is empty.
                         if len(t) == 0:
                             del p[t_i + 1]['inner']
                     return True
+                # Visit children.
                 else:
                     for i in range(len(t)):
                         child = t[i]
                         if 'inner' in child:
                             if save(child['inner'], child['id'], i, t):
                                 return True
+                # No luck. What the fuck! (Probably, because of changes from another process.)
                 return False
+            # Apply changes.
             update_feeds(save)
+            # Update selection stack.
             tree.select_stack.pop()
             tree.select_stack[-1] = (node, tree.select_stack[-1][1])
+            # Force redraw.
             tree.draw_force = True
-        # Move inward.
+        # Move inward (that is right.)
         elif action == 'in':
             if node is None:
                 # Root is stationary.
                 continue
+            # Get parent node.
             parent = tree.select_stack[-2][0]
-            nodei = tree.select_stack[-1][1]
             id_p = None if parent is None else parent['id']
             parent = feeds if parent is None else parent['inner']
+            # Get selected node.
+            nodei = tree.select_stack[-1][1]
+            id_n = node['id']
+            # Verify that there is a branch beneath the selected node.
             if (nodei + 1 == len(parent)) or (parent[nodei + 1]['url'] is not None):
                 continue
-            id_n, id_m = node['id'], parent[nodei + 1]['id']
+            # Get the node beneath the select node, its parent-to-be.
+            id_m = parent[nodei + 1]['id']
+            # Function for moving the node.
             def save(t, id_t = None):
+                # We need to search, because another process may have modified the tree.
+                # Visiting the parent?
                 if id_p == id_t:
+                    # Find position of the select node, and the node beneath it.
                     n_is = [i for i in range(len(t)) if t[i]['id'] == id_n]
                     m_is = [i for i in range(len(t)) if t[i]['id'] == id_m]
                     if (len(n_is) != 1) or (m_is != [n_is[0] + 1]):
                         return True
-                    n_i, new_parent = n_is[0], t[m_is[0]]
+                    n_i = n_is[0]
+                    # Get new parent.
+                    new_parent = t[m_is[0]]
                     if new_parent['url'] is not None:
                         return True
+                    # Reparent.
                     if 'inner' not in new_parent:
                         new_parent['inner'] = []
                     new_parent['inner'].insert(0, t[n_i])
                     del t[n_i]
                     return True
+                # Visit children.
                 else:
                     for i in range(len(t)):
                         child = t[i]
                         if 'inner' in child:
                             if save(child['inner'], child['id']):
                                 return True
+                # No luck.
                 return False
+            # Apply changes.
             update_feeds(save)
+            # Update selection stack.
             tree.select_stack.pop()
             tree.select_stack.append((parent[nodei], nodei))
             tree.select_stack.append((parent[nodei]['inner'][0], 0))
+            # Force redraw.
             tree.draw_force = True
             node['draw_line'] = -1
         # Mark as read or not.
