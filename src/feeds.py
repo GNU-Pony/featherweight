@@ -290,29 +290,48 @@ def open_feed(feed_node, callback):
         return nodes
     
     def read_unread(mod, nodes):
+        '''
+        Mark nodes and their children as either read or unread
+        
+        @param  mod:`-1`|`+1`              -1 to mark as read, +1 to mark as unread
+        @param  nodes:itr<dict<str, _|↑>>  Nodes to mark as read or unread
+        '''
+        # Get GUID:s of articles to update.
         guids = [node['guid'] for node in nodes]
-        updated = None
+        # Calls a given for all nodes that qualifies.
         def update(f, qualifer):
             [f(guid) for guid in guids if qualifer(guid)]
-        if mod > 0:
+        # Mark as unread?
+        if mod == 1:
+            # Update tree.
             updated = update_entries(id, lambda _, unread : update(unread.add, lambda g : g not in unread))
+            # Update 'unread'-set.
             [unread.add(guid) for guid in guids if guid not in unread]
-        elif mod < 0:
+        # Mark as read?
+        elif mod == -1:
+            # Update tree.
             updated = update_entries(id, lambda _, unread : update(unread.remove, lambda g : g in unread))
+            # Update 'unread'-set.
             [unread.remove(guid) for guid in guids if guid in unread]
         else:
+            # Never reached.
             return
+        # Update new-article-counter for thee feed (root).
         tree.count += mod * len(guids)
+        # Update nodes.
         for node in nodes:
+            # Find ancestors.
             pubdate = node['pubdate']
             ancestors = [years[pubdate[0]]]
             while len(ancestors) < 3:
                 ancestors.append(ancestors[-1][pubdate[len(ancestors)]])
-            ancestors.append(node)
+            ancestors.append(node) # ... and the nodes themself.
+            # Things will have to be redrawn.
             for node in ancestors:
-                node['new'] += mod
+                node['new'] += mod # Update new-artice-counter for all ancestors.
                 node['draw_line'] = -1
             tree.redraw_root = True
+        # Save changes to the feed tree, and feed list file.
         if updated:
             callback(mod * len(guids))
     
