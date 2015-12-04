@@ -394,7 +394,7 @@ try:
                 node = node['id']
                 update_feeds(lambda t : remove_node(t, node))
                 tree.select_stack.pop()
-            #  Redraw the screen, now that there is no dialogue on it.
+            # Redraw the screen, now that there is no dialogue on it.
             print('\033[H\033[2J', end = '', flush = True)
             tree.draw_force = True
         # Move up or down.
@@ -434,7 +434,7 @@ try:
                         if 'inner' in child:
                             if save(child['inner'], child['id']):
                                 return True
-                # No luck.
+                # No luck. Search next child.
                 return False
             # Apply changes.
             update_feeds(save)
@@ -474,7 +474,7 @@ try:
                         if 'inner' in child:
                             if save(child['inner'], child['id'], i, t):
                                 return True
-                # No luck. What the fuck! (Probably, because of changes from another process.)
+                # No luck. Search next child.
                 return False
             # Apply changes.
             update_feeds(save)
@@ -528,7 +528,7 @@ try:
                         if 'inner' in child:
                             if save(child['inner'], child['id']):
                                 return True
-                # No luck.
+                # No luck. Search next child.
                 return False
             # Apply changes.
             update_feeds(save)

@@ -267,11 +267,23 @@ def open_feed(feed_node, callback):
     tree = Tree(feed_node['title'], entries)
     
     def get_nodes(node, qualifier):
+        '''
+        List all node inside, directly or indirectly, a node,
+        that passes a test
+        
+        @param   node:dict<str, _|list<↑>>?       Node from which to start enumeration
+        @param   qualifier:(dict<str, _|↑>)→bool  Should return truth for nodes to return
+        @return  :list<dict<str, _|↑>>            Found nodes that qualified
+        '''
         nodes = []
+        # At leaf.
         if (node is not None) and ('inner' not in node):
+            # List node if it qualifies
             if qualifier(node):
                 nodes.append(node)
+        # At root or branch?
         else:
+            # Visit children.
             inners = node['inner'] if node is not None else entries
             for inner in inners:
                 nodes += get_nodes(inner, qualifier)
@@ -316,71 +328,91 @@ def open_feed(feed_node, callback):
             return False
         # Edit article.
         elif action == 'edit':
-            if (node is not None) and ('inner' not in node):
-                table = {'Title' : node['realtitle'].split('\n')[0]}
-                values = {}
-                saved = False
-                def saver():
-                    nonlocal table, saved, values
-                    values['title'] = table['Title']
-                    saved = True
-                    return True
-                text_area = TextArea(['Title'], table)
-                text_area.initialise(False)
-                print('\033[?25h\033[?9l', end = '', flush = True)
-                text_area.run(saver)
-                print('\033[?9h\033[?25l', end = '', flush = True)
-                text_area.close()
-                gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
-                gettext.textdomain('@PKGNAME@')
-                if saved:
-                    node['realtitle'] = values['title']
-                    pubdate = node['pubdate']
-                    pubdate = '%02i:%02i:%02i' % (pubdate[3], pubdate[4], pubdate[5])
-                    node['title'] = '(%s) %s' % (pubdate, values['title'])
-                    modify_entry(id, {node['guid'] : values})
-                print('\033[H\033[2J', end = '', flush = True)
-                tree.draw_force = True
-        # Open article.
+            if (node is None) or ('inner' in node):
+                # We can only edit articles, not the root or year-, month- or date-branches.
+                continue
+            table = {'Title' : node['realtitle'].split('\n')[0]}
+            values = {}
+            saved = False
+            # Callback-function, for the editor, used to retrieve the changes.
+            def saver():
+                nonlocal table, saved, values
+                values['title'] = table['Title']
+                saved = True
+                return True
+            # Open editor.
+            text_area = TextArea(['Title'], table)
+            text_area.initialise(False)
+            print('\033[?25h\033[?9l', end = '', flush = True)
+            text_area.run(saver)
+            print('\033[?9h\033[?25l', end = '', flush = True)
+            text_area.close()
+            # Restore locale, if editor change it.
+            gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
+            gettext.textdomain('@PKGNAME@')
+            # Any changes?
+            if saved:
+                # Apply them.
+                node['realtitle'] = values['title']
+                pubdate = node['pubdate']
+                pubdate = '%02i:%02i:%02i' % (pubdate[3], pubdate[4], pubdate[5])
+                node['title'] = '(%s) %s' % (pubdate, values['title'])
+                modify_entry(id, {node['guid'] : values})
+            # Redraw the screen, now that there is not editor open anymore.
+            print('\033[H\033[2J', end = '', flush = True)
+            tree.draw_force = True
+        # Read article.
         elif action == 'open':
-            if (node is not None) and ('inner' not in node):
-                description = ''
-                if 'link' in node:
-                    description += '%s<br><br>' % (_('Link: %s') % node['link'])
-                if 'description' in node:
-                    description += node['description']
-                description = description.encode('utf-8')
-                proc = ['html2text']
-                if ('FEATHERWEIGHT_HTML' in os.environ) and (not os.environ['FEATHERWEIGHT_HTML'] == ''):
-                    proc = ['sh', '-c', os.environ['FEATHERWEIGHT_HTML']]
-                proc = Popen(proc, stdin = PIPE, stdout = PIPE, stderr = sys.stderr)
-                description = proc.communicate(description)[0]
-                pager = os.environ['PAGER'] if 'PAGER' in os.environ else None
-                pager = None if pager == '' else pager
-                if pager is None:
-                    path = os.environ['PATH'] if 'PATH' in os.environ else None
-                    if path is not None:
-                        path = path.split(':')
-                        for pg in ['less', 'more', 'most', 'pg']:
-                            for p in path:
-                                if os.access('%s/%s' % (p, pg), os.X_OK):
-                                    pager = pg
-                                    break
-                            if pager is not None:
+            if (node is None) or ('inner' in node):
+                # We can only read articles, not the root or year-, month- or date-branches.
+                continue
+            # Get link and description (content) of article.
+            description = ''
+            if 'link' in node:
+                description += '%s<br><br>' % (_('Link: %s') % node['link'])
+            if 'description' in node:
+                description += node['description']
+            description = description.encode('utf-8')
+            # Convert from HTML to pony-readable format.
+            proc = ['html2text'] ## Well that (markdown (in new versions)) is really readable, but we will soon do something about that.
+            if ('FEATHERWEIGHT_HTML' in os.environ) and (not os.environ['FEATHERWEIGHT_HTML'] == ''):
+                proc = ['sh', '-c', os.environ['FEATHERWEIGHT_HTML']]
+            proc = Popen(proc, stdin = PIPE, stdout = PIPE, stderr = sys.stderr)
+            description = proc.communicate(description)[0]
+            # Get pager.
+            pager = os.environ['PAGER'] if 'PAGER' in os.environ else None
+            pager = None if pager == '' else pager
+            # No pager specified?
+            if pager is None:
+                # That's okay, just search PATH for one.
+                path = os.environ['PATH'] if 'PATH' in os.environ else None
+                if path is not None:
+                    path = path.split(':')
+                    for pg in ['less', 'more', 'most', 'pg']:
+                        for p in path:
+                            if os.access('%s/%s' % (p, pg), os.X_OK):
+                                pager = pg
                                 break
-                if pager is not None:
-                    print('\033[H\033[2J\033[?9l\033[?25h\033[?1049l', end = '', flush = True)
-                    proc = Popen(['sh', '-c', pager], stdin = PIPE, stdout = sys.stdout, stderr = sys.stderr)
-                    proc.communicate(description)
-                    print('\033[?1049h\033[?25l\033[?9h\033[H\033[2J', end = '', flush = True)
-                else:
-                    print('\033[H\033[2J\033[?9l', end = '', flush = True)
-                    sys.stdout.buffer.write(description)
-                    sys.stdout.buffer.flush()
-                    while sys.stdin.read(1)[0] != '\n':
-                        pass
-                    print('\033[?9h\033[H\033[2J', end = '', flush = True)
-                tree.draw_force = True
+                        if pager is not None:
+                            break
+            # Do we have a pager?
+            if pager is not None:
+                # Use the pager.
+                print('\033[H\033[2J\033[?9l\033[?25h\033[?1049l', end = '', flush = True)
+                proc = Popen(['sh', '-c', pager], stdin = PIPE, stdout = sys.stdout, stderr = sys.stderr)
+                proc.communicate(description)
+                print('\033[?1049h\033[?25l\033[?9h\033[H\033[2J', end = '', flush = True)
+            # No pager?
+            else:
+                # Act as a dumb pager.
+                print('\033[H\033[2J\033[?9l', end = '', flush = True)
+                sys.stdout.buffer.write(description)
+                sys.stdout.buffer.flush()
+                while sys.stdin.read(1)[0] != '\n':
+                    pass
+                print('\033[?9h\033[H\033[2J', end = '', flush = True)
+            # Redraw the screen, now that there is not an article on it anymore.
+            tree.draw_force = True
         # Add node.
         elif action == 'add':
             # “Add”, add what?
@@ -392,7 +424,9 @@ def open_feed(feed_node, callback):
         # Delete node.
         elif action == 'delete':
             if node is None:
+                # Cannot delete root here, go to the previous page for that.
                 continue
+            # Confirm action.
             Popen(['stty', 'echo', 'icanon'], stdout = PIPE, stderr = PIPE).communicate()
             print('\033[H\033[2J\033[?25h\033[?9l%s' % (_('Are you sure you to delete %s?') % double_quote(node['title'])))
             print(_('Type %s, if you are sure.') % quote(_('yes')))
@@ -400,24 +434,37 @@ def open_feed(feed_node, callback):
             Popen(['stty', '-echo', '-icanon'], stdout = PIPE, stderr = PIPE).communicate()
             print('\033[?25l\033[?9h', end = '', flush = True)
             print('\033[H\033[2J', end = '', flush = True)
+            # Redraw the screen, now that there is no dialogue on it.
             tree.draw_force = True
+            # Did the user change her mind?
             if not delete:
                 continue
+            # Mark everything in the node read. (To keep track of new-article-count.)
             read_unread(-1, get_nodes(node, lambda n : n['new'] == 1))
+            # Get articles to delete.
             guids = [n['guid'] for n in get_nodes(node, lambda _ : True)]
+            # Delete articles.
             delete_entry_content(id, set(guids))
             def delete_node(nodes, node_id):
                 for i in range(len(nodes)):
+                    # Is is this node?
                     if nodes[i]['id'] == node_id:
+                        # Delete it, and pop the selection stack.
                         del nodes[i]
                         tree.select_stack.pop()
                         return True
+                    # Is this a branch?
                     elif 'inner' in nodes[i]:
+                        # Visit children.
                         if delete_node(nodes[i]['inner'], node_id):
+                            # Found it.
+                            # Did the parent become childless?
                             if len(nodes[i]['inner']) == 0:
+                                # Delete it and pop the stack.
                                 del nodes[i]
                                 tree.select_stack.pop()
                             return True
+                # No luck. Search next child.
                 return False
             delete_node(entries, node['id'])
         # Mark node, and its children, as read.
@@ -437,17 +484,20 @@ def open_feed(feed_node, callback):
             if action == old_colour:
                 # Why continue if the colour will not change?
                 continue
-            #
+            # Apply colour.
             modify_entry(id, {node['guid'] : {'colour' : action}})
             if action == ...:
                 del node['colour']
             else:
                 node['colour'] = action
+            # Request redraw of node.
             node['draw_line'] = -1
+            # List ancestors.
             pubdate = node['pubdate']
             ancestors = [years[pubdate[0]]]
             while len(ancestors) < 3:
                 ancestors.append(ancestors[-1][pubdate[len(ancestors)]])
+            # Propagate colour ancestors, as appropriate.
             for ancestor in reversed(ancestors):
                 if 'colours' not in ancestor:
                     ancestor['colours'] = dict((c, 0) for c in list(range(8)))
