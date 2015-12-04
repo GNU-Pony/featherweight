@@ -21,9 +21,16 @@ import pwd
 import gettext
 from subprocess import Popen, PIPE
 
+### Useful things. ###
+
+
+
 gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
 gettext.textdomain('@PKGNAME@')
 _ = gettext.gettext
+'''
+:(str)→str  Translation function.
+'''
 
 
 

@@ -31,6 +31,8 @@ from trees import *
 from updater import *
 from feeds import *
 
+### Prologue and feed tree page. ###
+
 
 
 args = sys.argv[1:]
@@ -262,7 +264,7 @@ def update_feeds(function):
         feeds_ = make_backup(pathname, False).decode('utf-8', 'strict')
         feeds_ = [] if len(feeds_) == 0 else eval(feeds_)
         function(feeds_)
-        if save_file_or_die(pathname, pid is None, lambda : repr(feeds)_.encode('utf-8')):
+        if save_file_or_die(pathname, pid is None, lambda : repr(feeds_).encode('utf-8')):
             try:
                 status = Tree.count_new(feeds_)
                 with open('%s/status' % root, 'wb') as file:
@@ -274,93 +276,131 @@ def update_feeds(function):
 
 # Interactive session.
 try:
+    # Create tree of feed list.
     tree = Tree('My Feeds', feeds)
+    # Session.
     while True:
+        # Get input command from user.
         (action, node) = tree.interact()
+        # Exit.
         if action == 'quit':
             break
+        # Edit node.
         elif action == 'edit':
-            if node is not None:
-                table = {'Title' : node['title'], 'Group' : node['group'], 'URL' : '' if node['url'] is None else node['url']}
-                values = {}
-                saved = False
-                def saver():
-                    global table, saved, values, node
-                    if table['Title'] == '':
+            if node is None:
+                # Cannot edit root.
+                continue
+            table = {'Title' : node['title'], 'Group' : node['group'], 'URL' : '' if node['url'] is None else node['url']}
+            values = {}
+            saved = False
+            # Callback-function, for the editor, used to retrieve the changes.
+            def saver():
+                global table, saved, values, node
+                if table['Title'] == '':
+                    return False
+                if (not table['URL'] == '') and ('inner' in node):
+                    if (node['inner'] is None) or (len(node['inner']) == 0):
+                        values['inner'] = ...
+                    else:
                         return False
-                    if (not table['URL'] == '') and ('inner' in node):
-                        if (node['inner'] is None) or (len(node['inner']) == 0):
-                            values['inner'] = ...
-                        else:
-                            return False
-                    values['title'] = table['Title']
-                    values['group'] = table['Group']
-                    values['url'] = None if table['URL'] == '' else table['URL']
-                    saved = True
-                    return True
-                text_area = TextArea(['Title', 'Group', 'URL'], table)
-                text_area.initialise(False)
-                print('\033[?25h\033[?9l', end = '', flush = True)
-                text_area.run(saver)
-                print('\033[?9h\033[?25l', end = '', flush = True)
-                text_area.close()
-                gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
-                gettext.textdomain('@PKGNAME@')
-                if saved:
-                    update_feeds(lambda t : update_node(t, None if node is None else node['id'], values))
-                print('\033[H\033[2J', end = '', flush = True)
-                tree.draw_force = True
+                values['title'] = table['Title']
+                values['group'] = table['Group']
+                values['url'] = None if table['URL'] == '' else table['URL']
+                saved = True
+                return True
+            # Open editor.
+            text_area = TextArea(['Title', 'Group', 'URL'], table)
+            text_area.initialise(False)
+            print('\033[?25h\033[?9l', end = '', flush = True)
+            text_area.run(saver)
+            print('\033[?9h\033[?25l', end = '', flush = True)
+            text_area.close()
+            # Restore locale, if editor change it.
+            gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
+            gettext.textdomain('@PKGNAME@')
+            # Any changes?
+            if saved:
+                # Apply them.
+                update_feeds(lambda t : update_node(t, None if node is None else node['id'], values))
+            # Redraw the screen, now that there is not editor open anymore.
+            print('\033[H\033[2J', end = '', flush = True)
+            tree.draw_force = True
+        # Open feed.
         elif action == 'open':
             if (node is None) or ('url' not in node) or (node['url'] is None) or (node['url'] == ''):
+                # Cannot open unless it is a feed, not groups and root.
                 continue
+            # When changes are made, we will save directy (rather than waiting
+            # until we get back here) if they affect the feed list file.
             def update(new):
                 tree.count += new
                 update_feeds(lambda t : update_node_newness(t, node['id'], new))
+            # Open the page for the feed.
             if open_feed(node, update):
+                # This means that the user selected to quit rather than return.
                 break
+            # Redraw the screen, now that the feed's page is not on it anymore.
             tree.draw_force = True
+        # Add new node.
         elif action == 'add':
-            if (node is None) or ('url' not in node) or (node['url'] is None) or (node['url'] == ''):
-                table = {'Title' : '', 'Group' : '', 'URL' : ''}
-                values = {'id' : str(uuid.uuid4()), 'new' : 0}
-                saved = False
-                def saver():
-                    global table, values, saved
-                    if table['Title'] == '':
-                        return False
-                    values['title'] = table['Title']
-                    values['group'] = table['Group']
-                    values['url'] = None if table['URL'] == '' else table['URL']
-                    saved = True
-                    return True
-                text_area = TextArea(['Title', 'Group', 'URL'], table)
-                text_area.initialise(False)
-                print('\033[?25h\033[?9l', end = '', flush = True)
-                text_area.run(saver)
-                print('\033[?9h\033[?25l', end = '', flush = True)
-                text_area.close()
-                gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
-                gettext.textdomain('@PKGNAME@')
-                if saved:
-                    update_feeds(lambda t : insert_node(t, None if node is None else node['id'], values))
-                print('\033[H\033[2J', end = '', flush = True)
-                tree.draw_force = True
+            if (node is not None) and ('url' in node) and (node['url'] is not None) and not (node['url'] == ''):
+                # Cannot add nodes inside news feeds.
+                continue
+            table = {'Title' : '', 'Group' : '', 'URL' : ''}
+            values = {'id' : str(uuid.uuid4()), 'new' : 0}
+            saved = False
+            # Callback-function, for the editor, used to retrieve the written data.
+            def saver():
+                global table, values, saved
+                if table['Title'] == '':
+                    return False
+                values['title'] = table['Title']
+                values['group'] = table['Group']
+                values['url'] = None if table['URL'] == '' else table['URL']
+                saved = True
+                return True
+            # Open editor.
+            text_area = TextArea(['Title', 'Group', 'URL'], table)
+            text_area.initialise(False)
+            print('\033[?25h\033[?9l', end = '', flush = True)
+            text_area.run(saver)
+            print('\033[?9h\033[?25l', end = '', flush = True)
+            text_area.close()
+            # Restore locale, if editor change it.
+            gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
+            gettext.textdomain('@PKGNAME@')
+            # Did the user go through with it?
+            if saved:
+                # Add the node.
+                update_feeds(lambda t : insert_node(t, None if node is None else node['id'], values))
+            # Redraw the screen, now that there is not editor open anymore.
+            print('\033[H\033[2J', end = '', flush = True)
+            tree.draw_force = True
+        # Delete node.
         elif action == 'delete':
-            if node is not None:
-                Popen(['stty', 'echo', 'icanon'], stdout = PIPE, stderr = PIPE).communicate()
-                print('\033[H\033[2J\033[?25h\033[?9l%s' % (_('Are you sure you to delete %s?') % double_quote(node['title'])))
-                print(_('Type %s, if you are sure.') % quote(_('yes')))
-                delete = sys.stdin.readline().replace('\n', '') == _('yes')
-                Popen(['stty', '-echo', '-icanon'], stdout = PIPE, stderr = PIPE).communicate()
-                print('\033[?25l\033[?9h', end = '', flush = True)
-                if delete:
-                    node = node['id']
-                    update_feeds(lambda t : remove_node(t, node))
-                    tree.select_stack.pop()
-                print('\033[H\033[2J', end = '', flush = True)
-                tree.draw_force = True
+            if node is None:
+                # Cannot delete root, silly.
+                continue
+            # Confirm end-of-the-world-dangerous action.
+            Popen(['stty', 'echo', 'icanon'], stdout = PIPE, stderr = PIPE).communicate()
+            print('\033[H\033[2J\033[?25h\033[?9l%s' % (_('Are you sure you to delete %s?') % double_quote(node['title'])))
+            print(_('Type %s, if you are sure.') % quote(_('yes')))
+            delete = sys.stdin.readline().replace('\n', '') == _('yes')
+            Popen(['stty', '-echo', '-icanon'], stdout = PIPE, stderr = PIPE).communicate()
+            print('\033[?25l\033[?9h', end = '', flush = True)
+            # Did the user really want this?
+            if delete:
+                # Delete the node.
+                node = node['id']
+                update_feeds(lambda t : remove_node(t, node))
+                tree.select_stack.pop()
+            #  Redraw the screen, now that there is no dialogue on it.
+            print('\033[H\033[2J', end = '', flush = True)
+            tree.draw_force = True
+        # Move up or down.
         elif action in ('up', 'down'):
             if node is None:
+                # Root is stationary.
                 continue
             parent = tree.select_stack[-2][0]
             id_p = None if parent is None else parent['id']
@@ -387,8 +427,11 @@ try:
                 return False
             update_feeds(save)
             tree.select_stack[-1] = (parent[nodej], nodej)
+        # Move outward.
         elif action == 'out':
             if len(tree.select_stack) < 3:
+                # Root is stationary.                         (len(tree.select_stack) == 1)
+                # Cannot move into root, need another parent. (len(tree.select_stack) == 2)
                 continue
             parent = tree.select_stack[-2][0]
             id_p, id_n = parent['id'], node['id']
@@ -413,8 +456,10 @@ try:
             tree.select_stack.pop()
             tree.select_stack[-1] = (node, tree.select_stack[-1][1])
             tree.draw_force = True
+        # Move inward.
         elif action == 'in':
             if node is None:
+                # Root is stationary.
                 continue
             parent = tree.select_stack[-2][0]
             nodei = tree.select_stack[-1][1]
@@ -450,10 +495,16 @@ try:
             tree.select_stack.append((parent[nodei]['inner'][0], 0))
             tree.draw_force = True
             node['draw_line'] = -1
+        # Mark as read or not.
         elif action in ('read', 'unread'):
-            pass # we do not have entires, just feeds, nothing to read/unread
+            # We do not have entires, just feeds, nothing to read/unread.
+            # Implement feed-wide read/unread here is a bad idea.
+            pass
+        # To the previous page.
         elif action == 'back':
-            pass # we are at the first page
+            # We are at the first page.
+            pass
+        # Colour node.
         elif action in '012345678':
             if node is None:
                 continue

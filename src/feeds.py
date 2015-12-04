@@ -27,6 +27,9 @@ from common import _
 from flocker import *
 from trees import *
 
+### Feed page. ###
+
+
 
 MONTHS = { 1 : 'January',
            2 : 'February',
@@ -250,12 +253,12 @@ def modify_entry(feed_id, updates):
 
 
 
-def open_feed(feed_node, recall):
+def open_feed(feed_node, callback):
     '''
     Inspect a feed
     
     @param   feed_node:dict<str, _|str>  The node in the feed tree we the feed we are inspecting
-    @param   recall:(:int)→void          Notify the previous try about an update, the parameter
+    @param   callback:(:int)→void        Notify the previous tree about an update, the parameter
                                          specifies how much should be added to ['new']
     @return  :bool                       Whether the entire program should exit
     '''
@@ -299,14 +302,19 @@ def open_feed(feed_node, recall):
                 node['draw_line'] = -1
             tree.redraw_root = True
         if updated:
-            recall(mod * len(guids))
+            callback(mod * len(guids))
     
+    # Session.
     while True:
+        # Get input command from user.
         (action, node) = tree.interact()
+        # Exit.
         if action == 'quit':
             return True
+        # Back to the first page.
         elif action == 'back':
             return False
+        # Edit article.
         elif action == 'edit':
             if (node is not None) and ('inner' not in node):
                 table = {'Title' : node['realtitle'].split('\n')[0]}
@@ -333,6 +341,7 @@ def open_feed(feed_node, recall):
                     modify_entry(id, {node['guid'] : values})
                 print('\033[H\033[2J', end = '', flush = True)
                 tree.draw_force = True
+        # Open article.
         elif action == 'open':
             if (node is not None) and ('inner' not in node):
                 description = ''
@@ -372,10 +381,15 @@ def open_feed(feed_node, recall):
                         pass
                     print('\033[?9h\033[H\033[2J', end = '', flush = True)
                 tree.draw_force = True
+        # Add node.
         elif action == 'add':
-            pass # "add", add what?
+            # “Add”, add what?
+            pass
+        # Move node upward, downward, outward, or inward.
         elif action in ('up', 'down', 'out', 'in'):
-            pass # cannot reorder entries
+            # Cannot reorder nodes, they are sorted.
+            pass
+        # Delete node.
         elif action == 'delete':
             if node is None:
                 continue
@@ -406,17 +420,24 @@ def open_feed(feed_node, recall):
                             return True
                 return False
             delete_node(entries, node['id'])
+        # Mark node, and its children, as read.
         elif action == 'read':
             read_unread(-1, get_nodes(node, lambda n : n['new'] == 1))
+        # Mark node, and its children, as unread.
         elif action == 'unread':
             read_unread(+1, get_nodes(node, lambda n : n['new'] == 0))
+        # Colour node.
         elif action in '012345678':
             if (node is None) or ('inner' in node):
+                # Cannot colour root, or branch directly.
                 continue
+            # Get desired and current colour.
             action = ... if action == '0' else (int(action) % 8)
             old_colour = node['colour'] if 'colour' in node else ...
             if action == old_colour:
+                # Why continue if the colour will not change?
                 continue
+            #
             modify_entry(id, {node['guid'] : {'colour' : action}})
             if action == ...:
                 del node['colour']

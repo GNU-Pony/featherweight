@@ -20,6 +20,8 @@ import os
 import sys
 import fcntl
 
+### File locking, so we can have multiple processes running. ###
+
 
 def touch(file):
     '''
