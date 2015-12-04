@@ -35,6 +35,9 @@ ACTION_MAP = {'e' : 'edit',
               'q' : 'quit',
               '0' : '0', '1' : '1', '2' : '2', '3' : '3', '4' : '4',
               '5' : '5', '6' : '6', '7' : '7', '8' : '8', '9' : '9'}
+'''
+:dict<str, str>  Keypress to action string map.
+'''
 
 
 def remove_node(trees, node_id):
@@ -383,31 +386,48 @@ class Tree():
         @return  (command, feed):(str, dict<str, _>)  The choosen command and feed
         '''
         global height, width
+
+        # Print the tree.
         self.print_tree()
         
+        # Ring buffer for input.
         buf = '\0' * 10
+        # Queue of synthetic input.
         queued = ''
+        
+        # Interact.
         while True:
+            # Get input.
             if queued == '':
                 buf += chr(sys.stdin.buffer.read(1)[0])
             else:
                 buf += queued[:1]
                 queued = queued[1:]
             buf = buf[-10:]
+            
+            # Mouse input is not complete yet.
             if buf[-4 : -1] == '%s%s%s' % (chr(27), chr(91), chr(77)):
                 pass
+            # Mouse input is not complete yet.
             elif buf[-5 : -2] == '%s%s%s' % (chr(27), chr(91), chr(77)):
                 pass
+            # Mouse input is now complete.
             elif buf[-6 : -3] == '%s%s%s' % (chr(27), chr(91), chr(77)):
+                # Get action, X position, and Y-position.
                 a, x, y = ord(buf[-3]), ord(buf[-2]), ord(buf[-1])
+                # Scrolled up.
                 if a == 96:
                     queued += '\033[A' * 3
+                # Scrolled down.
                 elif a == 97:
                     queued += '\033[B' * 3
+                # Clicked.
                 elif a == 32:
+                    # Adjust Y-position, it is given with an offset.
                     y -= 33
                     if y < 0:
                         y += 256
+                    #
                     line = self.lineoff + y
                     last = self.select_stack[-1][0]
                     backup = self.select_stack[:]
@@ -450,54 +470,86 @@ class Tree():
                             self.print_tree()
                     else:
                         self.select_stack[:] = backup
+            
+            # Up.
             elif buf.endswith('\033[A'):
+                # Not at root?
                 if self.select_stack[-1][0] is not None:
+                    # No longer at the current node.
                     (cur, curi) = self.select_stack[-1]
                     self.select_stack.pop()
+                    # Not at the first node in the branch? (Goes to parent otherwise.)
                     if curi > 0:
+                        # Get parent.
                         par = self.select_stack[-1][0]
                         par = self.feeds if par is None else par['inner']
+                        # Go to previous node.
                         curi -= 1
                         cur = par[curi]
                         self.select_stack.append((cur, curi))
+                        # If the previous node is a branch, find its visible last node.
                         while ('inner' in cur) and Tree.is_expanded(cur):
                             curi = len(cur['inner']) - 1
                             cur = cur['inner'][curi]
                             self.select_stack.append((cur, curi))
                     self.print_tree()
+            
+            # C-up.
             elif buf.endswith('\033[1;5A'):
+                # Not at root?
                 if self.select_stack[-1][0] is not None:
+                    # No longer at the current node.
                     (cur, curi) = self.select_stack[-1]
                     self.select_stack.pop()
+                    # If we were not at the first node in the branch... (Goes to parent otherwise.)
                     if curi > 0:
+                        # ... go to the previous node.
                         par = self.select_stack[-1][0]
                         par = self.feeds if par is None else par['inner']
                         self.select_stack.append((par[curi - 1], curi - 1))
                     self.print_tree()
+            
+            # Down.
             elif buf.endswith('\033[B'):
+                # At root?
                 if self.select_stack[-1][0] is None:
+                    # Go to first node.
                     if len(self.feeds) > 0:
                         self.select_stack.append((self.feeds[0], 0))
                         self.print_tree()
+                # Not at root?
                 else:
                     (cur, curi) = self.select_stack[-1]
+                    # At expanded branch?
                     if ('inner' in cur) and Tree.is_expanded(cur):
+                        # Go to first child
                         self.select_stack.append((cur['inner'][0], 0))
                         self.print_tree()
+                    # At leaf or or collapsed branch?
                     else:
+                        # Back up the current selection stack.
                         backup = self.select_stack[:]
+                        # While not a root.
                         while len(self.select_stack) > 1:
+                            # Get parent.
                             par = self.select_stack[-2][0]
                             par = self.feeds if par is None else par['inner']
+                            # We are no longer at the current node.
                             self.select_stack.pop()
+                            # If there is a next node in the branch...
                             if curi + 1 < len(par):
+                                # ... go to it.
                                 self.select_stack.append((par[curi + 1], curi + 1))
                                 backup = None
                                 self.print_tree()
                                 break
+                            # ... otherwise retry from the parent.
                             (cur, curi) = self.select_stack[-1]
+                        # Restore the current selection stack if we did not find any node to which to go.
                         if backup is not None:
                             self.select_stack[:] = backup
+            
+            # C-down.
             elif buf.endswith('\033[1;5B'):
                 backup = None
                 while self.select_stack[-1][0] is not None:
@@ -516,29 +568,48 @@ class Tree():
                         if backup is not None:
                             self.select_stack[:] = backup
                         break
+            
+            # Right.
             elif buf.endswith('\033[C'):
+                # At root?
                 if self.select_stack[-1][0] is None:
+                    # Go to first node.
                     if len(self.feeds) > 0:
                         self.select_stack.append((self.feeds[0], 0))
                         self.print_tree()
+                # Not at root?
                 else:
+                    # Go to first child.
                     (cur, curi) = self.select_stack[-1]
                     if 'inner' in cur:
                         if not Tree.is_expanded(cur):
+                            # Expand branch whence we came if collapsed.
                             cur['expanded'] = True
                             self.collapsed_count -= 1
                         self.select_stack.append((cur['inner'][0], 0))
                         self.print_tree()
+            
+            # TODO C-right: go to first leaf if in branch
+            
+            # Left.
             elif buf.endswith('\033[D'):
+                # Go to parent.
                 if len(self.select_stack) > 1:
                     self.select_stack.pop()
                     self.print_tree()
+            
+            # C-left.
             elif buf.endswith('\033[1;5D'):
+		# Go to root.
                 self.select_stack[:] = self.select_stack[:1]
                 self.print_tree()
+            
+            # Space or, not at a branch, enter.
             elif buf.endswith(' ') or (buf.endswith('\n') and not Tree.is_leaf(self.select_stack[-1][0])):
                 cur = self.select_stack[-1][0]
+                # At root?
                 if cur is None:
+                    # Expand or collapse all nodes.
                     def expand(feed, value):
                         if 'inner' in feed:
                             cur_value = Tree.is_expanded(feed)
@@ -551,75 +622,115 @@ class Tree():
                     for feed in self.feeds:
                         expand(feed, value)
                     self.draw_force = True
+                # Not at root?
                 else:
+                    # But at a branch?
                     if 'inner' in cur:
+                        # Expand or collapse branch.
                         value = not Tree.is_expanded(cur)
                         self.collapsed_count += -1 if value else 1
                         cur['expanded'] = value
                         cur['draw_line'] = -1
                 self.print_tree()
+            
+            # C-l.
             elif buf.endswith(chr(ord('L') - ord('@'))):
+                # Redraw everything.
                 self.draw_force = True
                 self.print_tree()
+            
+            # n, P, N, or p. (Jump to unread leaf.)
             elif buf.endswith('n') or buf.endswith('P') or buf.endswith('N') or buf.endswith('p'):
+                # No unread leafs?
                 if self.count == 0:
                     continue
+                # Which direction?
                 downward = buf.endswith('n') or buf.endswith('P')
+                # Locate next/previous unread leaf.
                 while True:
                     cur = self.select_stack[-1][0]
+                    # At root.
                     if cur is None:
+                        # Test first node.
                         if downward:
                             self.select_stack.append((self.feeds[0], 0))
+                        # Test last node.
                         else:
                             self.select_stack.append((self.feeds[-1], len(self.feeds) - 1))
                             while 'inner' in self.select_stack[-1][0]:
                                 inners = self.select_stack[-1][0]['inner']
                                 self.select_stack.append((inners[-1], len(inners) - 1))
+                    # Find next.
                     elif downward:
                         curi = self.select_stack[-1][1]
+                        # On branch? Visit its children.
                         if 'inner' in cur:
                             self.select_stack.append((cur['inner'][0], 0))
+                        # Otherwise, test next, possibility and ancestors next.
                         else:
                             restart = True
+                            # While we are not at root.
                             while len(self.select_stack) > 1:
+                                # Get parent.
                                 par = self.select_stack[-2][0]
                                 par = self.feeds if par is None else par['inner']
+                                # We are no longer at current node.
                                 self.select_stack.pop()
+                                # Not at the last node in the branch?
                                 if curi + 1 < len(par):
+                                    # Select the next one.
                                     self.select_stack.append((par[curi + 1], curi + 1))
                                     restart = False
                                     break
                                 (cur, curi) = self.select_stack[-1]
+                            # Go to root if we have test everything below the
+                            # current node, and continue search from there.
                             if restart:
                                 self.select_stack[:] = self.select_stack[:1]
                                 continue
+                    # Find previous.
                     else:
                         curi = self.select_stack[-1][1]
+                        # We are not longer at the current node.
                         self.select_stack.pop()
+                        # Not at the first node in the branch?
                         if curi > 0:
+                            # Get parent.
                             par = self.select_stack[-1][0]
                             par = self.feeds if par is None else par['inner']
+                            # Got to previous node.
                             curi -= 1
                             cur = par[curi]
                             self.select_stack.append((cur, curi))
+                            # Is it a branch?
                             while 'inner' in cur:
+                                # Select the last node in that branch.
                                 curi = len(cur['inner']) - 1
                                 cur = cur['inner'][curi]
                                 self.select_stack.append((cur, curi))
+                                # Repeat, if the new node is also a branch.
+                        # Reached the root? Start over, beginning search at the last node in the tree.
                         if self.select_stack[-1][0] is None:
                             continue
+                    # Is the leaf unread?
                     cur = self.select_stack[-1][0]
                     if ('inner' not in cur) and ('new' in cur) and (cur['new'] > 0):
                         break
+                # Expand collapsed ancestors of the unread leaf.
                 for stack_item in self.select_stack[1:]:
                     stack_item = stack_item[0]
                     if not Tree.is_expanded(stack_item):
                         stack_item['expanded'] = True
                         self.collapsed_count -= 1
                         self.draw_force = True
+                # Draw.
                 self.print_tree()
+            
+            # Normal keypress.
             elif (buf[-2] not in '[;') and (buf[-1] in ACTION_MAP):
                 return (ACTION_MAP[buf[-1]], self.select_stack[-1][0])
+            
+            # Digit keypress.
             elif (buf[-3] != '\033' or buf[-2] != '[') and (buf[-5] != '\033' or buf[-4] != '[' or buf[-2] != ';') and (ord('0') <= ord(buf[-1]) <= ord('9')):
                 return (buf[-1], self.select_stack[-1][0])
 
