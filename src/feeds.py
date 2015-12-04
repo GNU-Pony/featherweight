@@ -40,6 +40,11 @@ MONTHS = { 1 : 'January',
           10 : 'October',
           11 : 'November',
           12 : 'December'}
+'''
+:dict<int, str>  Month number to month name map. Used to print the
+                 month name in full in month-nodes, and abbreviated
+                 in the date-nodes.
+'''
 
 
 
@@ -164,17 +169,11 @@ def update_entries(feed_id, function):
     @param   function:(have:set, unread:set)→void  Function that modifies the feed information
     @return  :bool                                 Whether the feed was updated
     '''
-    global terminated
     updated = False
     pathname = '%s/%s' % (root, feed_id)
     with touch(pathname) as feed_flock:
         flock(feed_flock, True)
-        feed_info = None
-        if os.access(pathname, os.F_OK):
-            with open(pathname, 'rb') as file:
-                feed_info = file.read()
-                with open('%s.bak' % pathname, 'wb') as bakfile:
-                    bakfile.write(feed_info)
+        feed_info = make_backup(pathname)
         if feed_info is not None:
             feed_info = feed_info.decode('utf-8', 'strict')
             feed_info = eval(feed_info) if len(feed_info) > 0 else {}
@@ -182,18 +181,7 @@ def update_entries(feed_id, function):
             unread = set() if 'unread' not in feed_info else feed_info['unread']
             updated_ = len(have) + len(unread)
             function(have, unread)
-            feed_info = repr(feed_info).encode('utf-8')
-            try:
-                with open(pathname, 'wb') as file:
-                    file.write(feed_info)
-            except Exception as err:
-                Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
-                print('\n\033[?9l\033[?25h\033[?1049l' if pid is None else '\n', end = '', flush = True)
-                pathname = abbr(root) + pathname[len(root):]
-                print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % (pathname, pathname))
-                terminated = True
-                if pid is None:
-                    raise err
+            save_file_or_die(pathname, True, lambda : repr(feed_info).encode('utf-8'))
             if not updated_ == len(have) + len(unread):
                 updated = True
         unflock(feed_flock)
@@ -208,34 +196,17 @@ def update_content_file(feed_id, function):
     @param  feed_in:str                              The ID of the feed
     @param  function:(itr<dict<str, int|str>>)→void  Function that modifies the content
     '''
-    global terminated
     pathname = '%s/%s-content' % (root, feed_id)
     with touch(pathname) as feed_flock:
         pid = flock_fork(feed_flock)
         if pid == 0:
             return
-        feed_content = None
-        if os.access(pathname, os.F_OK):
-            with open(pathname, 'rb') as file:
-                feed_content = file.read()
-                with open('%s.bak' % pathname, 'wb') as bakfile:
-                    bakfile.write(feed_content)
+        feed_content = make_backup(pathname)
         if feed_content is not None:
             feed_content = feed_content.decode('utf-8', 'strict')
             feed_content = eval(feed_content) if len(feed_content) > 0 else []
             function(feed_content)
-            feed_content = repr(feed_content).encode('utf-8')
-            try:
-                with open(pathname, 'wb') as file:
-                    file.write(feed_content)
-            except Exception as err:
-                Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
-                print('\n\033[?9l\033[?25h\033[?1049l' if pid is None else '\n', end = '', flush = True)
-                pathname = abbr(root) + pathname[len(root):]
-                print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % (pathname, pathname))
-                terminated = True
-                if pid is None:
-                    raise err
+            save_file_or_die(pathname, pid is None, lambda : repr(feed_content).encode('utf-8'))
         unflock_fork(feed_flock, pid)
 
 

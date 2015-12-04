@@ -26,45 +26,6 @@ from parser import *
 
 
 
-def save_file(filename, backup, datafun):
-    '''
-    Save data to a file, but retry to restore it one failure
-    
-    @param  filename:str    The path of the file
-    @param  backup:bytes?   The old content of the file
-    @param  datafun:()→str  Nullary functional that evaluates to the new content
-    '''
-    # Store new data.
-    try:
-        with open(filename, 'wb') as file:
-            file.write(datafun())
-    except Exception as err:
-	# Try to restore old file on error.
-        try:
-            if backup is not None:
-                with open(filename, 'wb') as file:
-                    file.write(backup)
-        except:
-            pass
-        raise err
-
-
-def make_backup(filename):
-    '''
-    Backup a file and return its content
-    
-    @param   filename:str  The path of the file
-    @return  :bytes        The content of the file
-    '''
-    backup = None
-    if os.access(filename, os.F_OK):
-        with open(filename, 'rb') as file:
-            backup = file.read()
-            with open(filename + '.bak', 'wb') as bakfile:
-                bakfile.write(backup)
-    return backup
-
-
 def fetch_file(url):
     '''
     Fetches a files, local or remote

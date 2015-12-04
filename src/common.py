@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import pwd
 import gettext
+from subprocess import Popen, PIPE
 
 gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
 gettext.textdomain('@PKGNAME@')
@@ -75,4 +76,68 @@ terminated = False
 '''
 :bool  Exiting?
 '''
+
+
+def make_backup(filename):
+    '''
+    Backup a file and return its content
+    
+    @param   filename:str  The path of the file
+    @return  :bytes        The content of the file
+    '''
+    backup = None
+    if os.access(filename, os.F_OK):
+        with open(filename, 'rb') as file:
+            backup = file.read()
+            with open(filename + '.bak', 'wb') as bakfile:
+                bakfile.write(backup)
+    return backup
+
+
+def save_file(filename, backup, datafun):
+    '''
+    Save data to a file, but retry to restore it on failure
+    
+    @param  filename:str    The path of the file
+    @param  backup:bytes?   The old content of the file
+    @param  datafun:()→str  Nullary functional that evaluates to the new content
+    '''
+    # Store new data.
+    try:
+        with open(filename, 'wb') as file:
+            file.write(datafun())
+    except Exception as err:
+	# Try to restore old file on error.
+        try:
+            if backup is not None:
+                with open(filename, 'wb') as file:
+                    file.write(backup)
+        except:
+            pass
+        raise err
+
+
+def save_file_or_die(filename, raise_error, datafun):
+    '''
+    Save data to a file, die verbosely on failure
+    
+    The error message assumes that there is a backup
+    at `filename + '.bak'`
+    
+    @param  filename:str      The path of the file
+    @param  raise_error:bool  Should an error be raised on error?
+    @param  datafun:()→str    Nullary functional that evaluates to the new content
+    '''
+    global terminated, old_stty, root
+    try:
+        with open(filename, 'wb') as file:
+            file.write(feed_info)
+    except Exception as err:
+        Popen(['stty', old_stty], stdout = PIPE, stderr = PIPE).communicate()
+        print('\n\033[?9l\033[?25h\033[?1049l' if pid is None else '\n', end = '', flush = True)
+        filename = abbr(root) + filename[len(root):]
+        print('\033[01;31m%s\033[00m', _('Your %s was saved to %s.bak') % (filename, filename))
+        terminated = True
+        if raise_error:
+            raise err
 
