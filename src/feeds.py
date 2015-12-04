@@ -130,28 +130,9 @@ def load_feed(id):
                     next_id += 1
                 days[pubdate[2]]['inner'].append(entry)
                 ancestors = [year_entry, month_entry, day_entry]
-                if not colour == ...:
-                    for ancestor in reversed(ancestors):
-                        if 'colours' not in ancestor:
-                            ancestor['colours'] = dict((c, 0) for c in list(range(8)))
-                            ancestor['colours'][...] = len(ancestor['inner']) - 1
-                        old_ancestor_colour = ancestor['colour'] if 'colour' in ancestor else ...
-                        ancestor['colours'][colour] += 1
-                        mode_c, mode_f = ..., 0
-                        for c in range(8):
-                            if mode_f < ancestor['colours'][c]:
-                                mode_f = ancestor['colours'][c]
-                                mode_c = c
-                        if not old_ancestor_colour == mode_c:
-                            if mode_c == ...:
-                                del ancestor['colour']
-                            else:
-                                ancestor['colour'] = mode_c
-                else:
-                    for ancestor in ancestors:
-                        if 'colours' in ancestor:
-                            ancestor['colours'][...] += 1
+                colour_propagation(ancestors, colour, None)
     
+    # Sort the tree.
     entries.sort(key = lambda x : -(x['year']))
     for year in entries:
         year['inner'].sort(key = lambda x : -(x['month']))
@@ -500,6 +481,8 @@ def open_feed(feed_node, callback):
             # Get desired and current colour.
             action = ... if action == '0' else (int(action) % 8)
             old_colour = node['colour'] if 'colour' in node else ...
+            if old_colour is None: # Who knows that the user may do.
+                old_colour = '...'
             if action == old_colour:
                 # Why continue if the colour will not change?
                 continue
@@ -517,22 +500,33 @@ def open_feed(feed_node, callback):
             while len(ancestors) < 3:
                 ancestors.append(ancestors[-1][pubdate[len(ancestors)]])
             # Propagate colour ancestors, as appropriate.
-            for ancestor in reversed(ancestors):
-                if 'colours' not in ancestor:
-                    ancestor['colours'] = dict((c, 0) for c in list(range(8)))
-                    ancestor['colours'][...] = len(ancestor['inner'])
-                old_ancestor_colour = ancestor['colour'] if 'colour' in ancestor else ...
+            colour_propagation(ancestors, colour, old_colour)
+
+
+def colour_propagation(ancestors, colour, old_colour):
+    if (old_colour is not None) or (not colour == ...):
+        for ancestor in reversed(ancestors):
+            if 'colours' not in ancestor:
+                ancestor['colours'] = dict((c, 0) for c in list(range(8)))
+                ancestor['colours'][...] = len(ancestor['inner']) - (1 if old_colour is None else 0)
+            old_ancestor_colour = ancestor['colour'] if 'colour' in ancestor else ...
+            if old_colour is not None:
                 ancestor['colours'][old_colour] -= 1
-                ancestor['colours'][action] += 1
-                mode_c, mode_f = ..., 0
-                for c in range(8):
-                    if mode_f < ancestor['colours'][c]:
-                        mode_f = ancestor['colours'][c]
-                        mode_c = c
-                if not old_ancestor_colour == mode_c:
-                    if mode_c == ...:
-                        del ancestor['colour']
-                    else:
-                        ancestor['colour'] = mode_c
-                    ancestor['draw_line'] = -1
+            ancestor['colours'][colour] += 1
+            mode_c, mode_f = ..., 0
+            for c in range(8):
+                if mode_f < ancestor['colours'][c]:
+                    mode_f = ancestor['colours'][c]
+                    mode_c = c
+            if not old_ancestor_colour == mode_c:
+                if mode_c == ...:
+                    del ancestor['colour']
+                else:
+                    ancestor['colour'] = mode_c
+            if old_colour is not None:
+		ancestor['draw_line'] = -
+    else:
+        for ancestor in ancestors:
+            if 'colours' in ancestor:
+                ancestor['colours'][...] += 1
 
