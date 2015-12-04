@@ -143,8 +143,9 @@ class Tree():
     @variable  count:int                           The number of new items
     @variable  select_stack:list<(:Tree?, :int?)>  Stack of selected nodes, object and index
     @variable  collapsed_count:int                 The number of collapsed branches
-    @variable  line:int                            - TODO
-    @variable  curline:int                         The current line in the tree
+    @variable  line:int                            Used to keep track of whether the vision field
+                                                   must be adjusted to make the selected node visible
+    @variable  curline:int                         The current line, in the tree, being drawn
     @variable  lineoff:int                         The index of the first visible line
     @variable  draw_force:bool                     Do I need to redraw the screen?
     @variable  draw_line:int                       The current line on the screen
@@ -291,9 +292,11 @@ class Tree():
             feed['draw_line'] = -1
         self.curline += 1
         
-        # TODO doc
+        # Was the the select node not printed yet?
         if self.line >= 0:
+            # Remember that that we just draw the a lnie.
             self.line += 1
+            # Select node not printed yet, now?
             if self.select_stack[-1][0] is feed:
                 self.line = ~self.line
         
@@ -324,7 +327,7 @@ class Tree():
         (height, width) = height_width.decode('utf-8', 'strict')[:-1].split(' ')
         height, width = int(height), int(width)
         
-        # TODO
+        # Do we need to redraw the currentöy and the previously selected line.
         if self.last_select is not self.select_stack[-1][0]:
             if self.last_select is not None:
                 self.last_select['draw_line'] = -1
@@ -349,7 +352,7 @@ class Tree():
                 print(title, end = '')
         self.line += 1
         self.curline += 1
-        # TODO
+        # At root? It as been printed.
         if len(self.select_stack) == 1:
             self.line = ~self.line
         self.draw_line = 1
@@ -364,15 +367,19 @@ class Tree():
         # Remember which node is selected.
         self.last_select = self.select_stack[-1][0]
         
-        # TODO
+        # Was the selected node visible?
         self.line = ~self.line
         if not (self.lineoff < self.line <= self.lineoff + height):
-            self.draw_force = True
+            # No. Then:
+            # Adjust vision field so the select node is centered..
             self.lineoff = self.line - height // 2
+            # If not possible to center, go to boundary.
             if not (self.lineoff < self.line <= self.lineoff + height):
                 self.lineoff -= 1
             if self.lineoff < 0:
                 self.lineoff = 0
+            # Drawn
+            self.draw_force = True
             self.print_tree()
         
         # Forced redraw has been applied (if it was requeted.)
