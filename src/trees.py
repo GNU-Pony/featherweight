@@ -427,7 +427,7 @@ class Tree():
                     y -= 33
                     if y < 0:
                         y += 256
-                    #
+                    # TODO
                     line = self.lineoff + y
                     last = self.select_stack[-1][0]
                     backup = self.select_stack[:]
@@ -552,19 +552,27 @@ class Tree():
             # C-down.
             elif buf.endswith('\033[1;5B'):
                 backup = None
+                # Find next node in the branch or and ancestor.
                 while self.select_stack[-1][0] is not None:
+                    # Get current node, and parent.
                     (cur, curi) = self.select_stack[-1]
                     par = self.select_stack[-2][0]
                     par = self.feeds if par is None else par['inner']
+                    # Not at the current last node in the branch?
                     if curi + 1 < len(par):
+                        # Go to the next node.
                         self.select_stack.pop()
                         self.select_stack.append((par[curi + 1], curi + 1))
                         self.print_tree()
                         break
+                    # At last node in branch.
                     elif self.select_stack[-2][0] is not None:
+                        # Try parent.
                         backup = self.select_stack[:]
                         self.select_stack.pop()
+                    # Did not find a node?
                     else:
+                        # Revert.
                         if backup is not None:
                             self.select_stack[:] = backup
                         break
@@ -731,6 +739,8 @@ class Tree():
                 return (ACTION_MAP[buf[-1]], self.select_stack[-1][0])
             
             # Digit keypress.
-            elif (buf[-3] != '\033' or buf[-2] != '[') and (buf[-5] != '\033' or buf[-4] != '[' or buf[-2] != ';') and (ord('0') <= ord(buf[-1]) <= ord('9')):
-                return (buf[-1], self.select_stack[-1][0])
+            elif (buf[-3] != '\033') or (buf[-2] != '['):
+                if (buf[-5] != '\033') or (buf[-4] != '[') or (buf[-2] != ';'):
+                    if ord('0') <= ord(buf[-1]) <= ord('9'):
+                        return (buf[-1], self.select_stack[-1][0])
 
