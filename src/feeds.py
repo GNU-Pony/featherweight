@@ -385,7 +385,7 @@ def open_feed(feed_node, callback):
                 description += node['description']
             description = description.encode('utf-8')
             # Convert from HTML to pony-readable format.
-            proc = ['html2text'] ## Well that (markdown (in new versions)) is really readable, but we will soon do something about that.
+            proc = ['html2text'] ## Well that (markdown (in new versions)) isn't really readable, but we will soon do something about that.
             if ('FEATHERWEIGHT_HTML' in os.environ) and (not os.environ['FEATHERWEIGHT_HTML'] == ''):
                 proc = ['sh', '-c', os.environ['FEATHERWEIGHT_HTML']]
             proc = Popen(proc, stdin = PIPE, stdout = PIPE, stderr = sys.stderr)
