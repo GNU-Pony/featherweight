@@ -316,7 +316,6 @@ try:
             print('\033[?9h\033[?25l', end = '', flush = True)
             text_area.close()
             # Restore locale, if editor change it.
-            gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
             gettext.textdomain('@PKGNAME@')
             # Any changes?
             if saved:
@@ -367,7 +366,6 @@ try:
             print('\033[?9h\033[?25l', end = '', flush = True)
             text_area.close()
             # Restore locale, if editor change it.
-            gettext.bindtextdomain('@PKGNAME@', '@LOCALEDIR@')
             gettext.textdomain('@PKGNAME@')
             # Did the user go through with it?
             if saved:
