@@ -131,7 +131,7 @@ class Vast:
             c = self.__compare_key(entry, key)
             if c < 0:
                 imin = imid + 1
-            else if c > 0:
+            elif c > 0:
                 imax = imid - 1
             else:
                 break
@@ -216,14 +216,160 @@ class Vast:
             self.tidy()
     
     
-    def update(self):
-        pass # TODO
+    def __update_content(self, value, index, offset, length):
+        '''
+        Update the content of an entry.
+        
+        @param  value:¿?    The new value.
+        @param  index:int   The position of the entry in the entry list.
+        @param  offset:int  The offset where the old value is stored.
+        @parma  length:int  The length of the old value.
+        '''
+        # Get data store store.
+        data = repr(value).encode('utf-8')
+        
+        update_removed = False
+        # Need to change data location?
+        if length < len(data):
+            # Update dead space counter.
+            if length > 0:
+                self.remove += length
+                update_removed = True
+            # Get new location.
+            offset = os.fstat(self.fd).st_size
+        # Is the current location smaller than required?
+        elif length > len(data):
+                self.remove += length - len(data)
+                update_removed = True
+        # Update dead space counter on file.
+        if update_removed:
+            self.__write(('%0*i' % (INTSIZE, self.removed)).encode('utf-8'), INTSIZE * 3)
+        
+        # Update table.
+        entry = ('%0*i%0*i' % (INTSIZE, ptr, INTSIZE, len(data))).encode('utf-8')
+        self.__write(entry, self.offset + index * self.xwidth + self.width)
+        
+        # Update content.
+        self.__write(data, offset)
     
     
-    def add(self, softtable = True):
-        pass # TODO
+    def update(self, key, value):
+        '''
+        Update an entry.
+        
+        @param  key:str            The key of the entry.
+        @param  value:¿?|None|...  The new value, `None` or `...` to remove.
+        '''
+        # Remove?
+        if (value is None) or (value is ...):
+            self.remove(key)
+            return
+        
+        # Get entry position and data location?
+        (index, offset, length) = self.__find(key)
+        if offset is None:
+            self.add(key, value, True)
+            return
+        
+        # Store content.
+        self.__update_content(value, index, offset, length)
+    
+    
+    def __shift(self, shift):
+        '''
+        Move the content read.
+        
+        @param  shift:int  The number of bytes with which to
+                           move the content downwards.
+        '''
+        start = self.offset + self.size * self.xwidth
+        amount = os.fstat(self.fd).st_size - start
+        self.__write(self.__read(amount, start), start + shift)
+        for i in range(self.items):
+            ptr = self.__read(INTSIZE, self.offset + i * self.xwidth)
+            ptr = int(ptr.decode('utf-8', 'strict'))
+            ptr = str(ptr + shift).encode('utf-8')
+            self.__write(ptr, self.offset + i * self.xwidth)
+    
+    
+    def add(self, key, value, sorttable = True):
+        '''
+        Add an item to the file.
+        
+        @param  key:str         The key of the item.
+        @param  value:¿?        The value of the item.
+        @param  sorttable:bool  Insert the entry in the table in its sortered position.
+        '''
+        INTSIZE = (self.xwidth - self.width) // 2
+        
+        # Ensure that the key size is large enough.
+        newkeysize = len(key.encode('utf-8')) + 1
+        if newkeysize > self.width:
+            self.__shift(self.size * (newkeysize - self.width))
+            # TODO
+            self.width = newkeysize
+            self.__write(('%0*i' % (INTSIZE, self.width)).encode('utf-8'), INTSIZE * 0)
+        
+        # Get position of new entry.
+        if sorttable:
+            (index, offset, _length) = self.__find(key)
+            if offset is not None:
+                self.update(key, value)
+                return
+        else:
+            index = self.items
+        
+        # Ensure than the entry list can hold another element.
+        if self.items == self.size:
+            newsize = self.size << 1
+            if newsize == 0:
+                newsize = 8
+            self.__shift((newsize - self.size) * self.xwidth)
+            self.size = newsize
+            self.__write(('%0*i' % (INTSIZE, self.size)).encode('utf-8'), INTSIZE * 2)
+        
+        # Add a gap in the entry list for the new entry.
+        if index < self.items:
+            after = self.__read((self.items - index) * self.xwidth, self.offset + index * self.xwidth)
+            self.__write(after, self.offset + (index + 1) * self.xwidth)
+        
+        # Insert entry.
+        entry = bytes(reversed(key.encode('utf-8')))
+        # The keys are reversed to reduce the risk that
+        # the beginning of the keys are identical, and thereby
+        # reduce the time spent in `__compare_key`.
+        entry += bytes([0] * (self.width - len(key)))
+        # The 1 at the end is so that `__compare_key` always end
+        # at then end (it is a zero in the if file).
+        entry += bytes([ord('0')] * (2 * INTSIZE))
+        self.__write(entry, self.offset + index * self.xwidth)
+        self.items += 1
+        
+        # Update item count.
+        self.__write(('%0*i' % (INTSIZE, self.items)).encode('utf-8'), INTSIZE * 1)
+        
+        # Write content and pointers.
+        self.__update_content(value, index, 0, 0)
     
     
     def sort_table(self):
-        pass # TODO
+        '''
+        Sort table table of entries.
+        
+        Call this after the last call to `add`, unless
+        its parameter `sorttable` was `True`.
+        '''
+        # Fetch entries.
+        entries = []
+        for i in range(self.items):
+            entries.append(self.__read(self.xwidth, self.offset + i * self.xwidth))
+        
+        # Sort entires.
+        entries.sort()
+        
+        # Store sorted table.
+        ptr = self.offset
+        for entry in entries:
+            self.__write(entry, ptr)
+            ptr += self.xwidth
 
