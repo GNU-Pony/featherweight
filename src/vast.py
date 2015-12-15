@@ -305,8 +305,12 @@ class Vast:
         # Ensure that the key size is large enough.
         newkeysize = len(key.encode('utf-8')) + 1
         if newkeysize > self.width:
+            extra = bytes([0] * (newkeysize - self.width))
             self.__shift(self.size * (newkeysize - self.width))
-            # TODO
+            for i in range(self.items):
+                entry = self.__read(self.xwidth, self.offset + i * self.xwidth)
+                entry = entry[:self.width] + extra + entry[self.width:]
+                self.__write(entry, self.offset + i * self.xwidth)
             self.width = newkeysize
             self.__write(('%0*i' % (INTSIZE, self.width)).encode('utf-8'), INTSIZE * 0)
         
