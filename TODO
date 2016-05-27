@@ -4,3 +4,4 @@ Do not use html2text, it sucks.
 Improve performance for feeds with vast number of news.
 Compression of old articles, in groups.
 Make extensible.
+When asking for confirmation, colour the title with the colour it has been marked
